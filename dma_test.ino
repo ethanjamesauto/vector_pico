@@ -10,7 +10,7 @@
  the control channel finishes. The data channel is paced by a timer to perform
  transactions at audio rate.
 
-                Edited 1/28/2023 by Ethan James
+Edited 1/28/2023 by Ethan James
  */
 
 // TODO: include C:\\Users\\Ethan\\AppData\\Local\\Arduino15\\packages\\rp2040\\hardware\\rp2040\\2.7.1
@@ -20,17 +20,14 @@
 #include <math.h>
 #include <stdio.h>
 
-// Number of samples per period in sine table
-#define sine_table_size 256
-
-// Sine table
-int raw_sin[sine_table_size];
+// Size of each buffer
+#define buffer_size 256
 
 // Table of values to be sent to DAC
-unsigned short DAC_data[sine_table_size];
+unsigned short DAC_data[2][buffer_size];
 
 // Pointer to the address of the DAC data table
-unsigned short* address_pointer = &DAC_data[0];
+unsigned short* address_pointer = &DAC_data[0][0];
 
 // A-channel, 1x, active
 #define DAC_config_chan_A 0b0011000000000000
@@ -42,8 +39,11 @@ unsigned short* address_pointer = &DAC_data[0];
 #define PIN_MOSI 7
 #define SPI_PORT spi0
 
+#define data_chan 0
+#define ctrl_chan 1
+
 // Number of DMA transfers per event
-const uint32_t transfer_count = sine_table_size;
+const uint32_t transfer_count = buffer_size;
 
 void setup()
 {
@@ -51,7 +51,7 @@ void setup()
     // stdio_init_all();
 
     // Initialize SPI channel (channel, baud rate set to 20MHz)
-    spi_init(SPI_PORT, 20000000);
+    spi_init(SPI_PORT, 24000000);
 
     // Format SPI channel (channel, data bits per transfer, polarity, phase,
     // order)
@@ -63,16 +63,12 @@ void setup()
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
 
-    // Build sine table and DAC data table
     int i;
-    for (i = 0; i < (sine_table_size); i++) {
-        raw_sin[i] = (int)(2047 * sin((float)i * 6.283 / (float)sine_table_size) + 2047); // 12 bit
-        DAC_data[i] = DAC_config_chan_A | (raw_sin[i] & 0x0fff);
+    for (i = 0; i < (buffer_size); i++) {
+        uint16_t data = i * 2;
+        DAC_data[0][i] = DAC_config_chan_A | (data & 0x0fff);
+        DAC_data[1][i] = DAC_config_chan_A | ((data + 1) & 0x0fff);
     }
-
-    // Select DMA channels
-    int data_chan = 0;
-    int ctrl_chan = 1;
 
     // Setup the control channel
     dma_channel_config c = dma_channel_get_default_config(ctrl_chan); // default configs
@@ -96,14 +92,9 @@ void setup()
     channel_config_set_transfer_data_size(&c2, DMA_SIZE_16); // 16-bit txfers
     channel_config_set_read_increment(&c2, true); // yes read incrementing
     channel_config_set_write_increment(&c2, false); // no write incrementing
-    // (X/Y)*sys_clk, where X is the first 16 bytes and Y is the second
-    // sys_clk is 125 MHz unless changed in code. Configured to ~44 kHz
-    dma_timer_set_fraction(0, 0x0017, 0xffff);
-    // 0x3b means timer0 (see SDK manual)
-    // channel_config_set_dreq(&c2, 0x3b); // DREQ paced by timer 0
     // write data at the request of the SPI TX FIFO
     channel_config_set_dreq(&c2, DREQ_SPI0_TX);
-	
+
     // chain to the controller DMA channel
     channel_config_set_chain_to(&c2, ctrl_chan); // Chain to control channel
 
@@ -111,16 +102,55 @@ void setup()
         data_chan, // Channel to be configured
         &c2, // The configuration we just created
         &spi_get_hw(SPI_PORT)->dr, // write address (SPI data register)
-        DAC_data, // The initial read address
-        sine_table_size, // Number of transfers
+        DAC_data[0], // The initial read address
+        buffer_size, // Number of transfers
         false // Don't start immediately.
     );
+
+    dma_channel_set_irq0_enabled(ctrl_chan, true);
+    irq_set_exclusive_handler(DMA_IRQ_0, isr);
+    irq_set_enabled(DMA_IRQ_0, true);
 
     // start the control channel
     dma_start_channel_mask(1u << ctrl_chan);
 }
 
+bool which = 1;
+bool done = true;
+
+void isr()
+{
+    if (!done) {
+        Serial.println("Can't keep up!");
+    } else {
+        address_pointer = &DAC_data[which][0];
+        which = !which;
+        done = false;
+    }
+    dma_hw->ints0 = 1u << ctrl_chan;
+}
+
 void loop()
 {
-    // do nothing
+    static uint16_t i = 0;
+    // set every item in DAC_data[!which] to i
+    if (!done) {
+        for (int j = 0; j < buffer_size; j++) {
+            DAC_data[!which][j] = i % 8; // DAC_config_chan_A | (i & 0x0fff);
+        }
+        done = true;
+        i++;
+    }
+}
+
+void setup1()
+{
+    Serial.begin();
+}
+
+void loop1()
+{
+    while (Serial.available() > 0) {
+        Serial.write(Serial.read());
+    }
 }
