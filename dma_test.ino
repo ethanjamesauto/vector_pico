@@ -47,7 +47,7 @@ const uint32_t transfer_count = buffer_size;
 
 void setup()
 {
-    // Initialize SPI channel (channel, baud rate set to 20MHz)
+    // Initialize SPI channel
     spi_init(SPI_PORT, 24000000);
 
     // Format SPI channel (channel, data bits per transfer, polarity, phase,
@@ -105,17 +105,19 @@ void setup()
     );
 
     dma_channel_set_irq0_enabled(CTRL_CHANNEL, true);
-    irq_set_exclusive_handler(DMA_IRQ_0, isr);
+    irq_set_exclusive_handler(DMA_IRQ_0, control_complete);
     irq_set_enabled(DMA_IRQ_0, true);
 
     // start the control channel
     dma_start_channel_mask(1u << CTRL_CHANNEL);
 }
 
-bool which = 1;
-bool done = true;
+bool which = 1; // (which) is read from by the data channel, and (!which) is written to by the line drawing algorithm
+bool done = true; // true if the inactive buffer has been fully prepared and is ready to be sent over SPI
 
-void isr()
+// This function tells the line drawing algorithm to write to the buffer not being read from by the data channel.
+// Runs when the control channel has already finished setting up the data channel. 
+void control_complete()
 {
     if (!done) {
         Serial.println("Can't keep up!");
@@ -147,6 +149,7 @@ void setup1()
 
 void loop1()
 {
+    //shouldn't slow down anything
     while (Serial.available() > 0) {
         Serial.write(Serial.read());
     }
