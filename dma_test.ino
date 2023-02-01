@@ -116,7 +116,7 @@ bool which = 1; // (which) is read from by the data channel, and (!which) is wri
 bool done = true; // true if the inactive buffer has been fully prepared and is ready to be sent over SPI
 
 // This function tells the line drawing algorithm to write to the buffer not being read from by the data channel.
-// Runs when the control channel has already finished setting up the data channel. 
+// Runs when the control channel has already finished setting up the data channel.
 void control_complete()
 {
     if (!done) {
@@ -129,28 +129,60 @@ void control_complete()
     dma_hw->ints0 = 1u << CTRL_CHANNEL;
 }
 
+#define MAX_PTS 4096
+uint32_t point_buffer[2][MAX_PTS];
+int point_count[2];
+bool which_point = 0;
+
 void loop()
 {
-    static uint16_t i = 0;
-    // set every item in DAC_data[!which] to i
+    static int i = 0;
     if (!done) {
         for (int j = 0; j < buffer_size; j++) {
-            DAC_data[!which][j] = i % 8; // DAC_config_chan_A | (i & 0x0fff);
+            DAC_data[!which][j] = point_buffer[!which_point][i++]; // DAC_config_chan_A | (i & 0x0fff);
+            if (i >= point_count[!which_point]) {
+                i = 0;
+            }
         }
         done = true;
-        i++;
     }
 }
 
 void setup1()
 {
     Serial.begin();
+    pinMode(9, OUTPUT);
+    for (point_count[!which_point] = 0; point_count[!which_point] < 100; point_count[!which_point]++) {
+        point_buffer[!which_point][point_count[!which_point]] = point_count[!which_point];
+    }
 }
 
 void loop1()
 {
-    //shouldn't slow down anything
+
+    static uint32_t cmd = 0;
+    static char cmd_count = 0;
+    static bool waiting = true;
+
+    // read from Serial
     while (Serial.available() > 0) {
-        Serial.write(Serial.read());
+        char b = Serial.read();
+        if (waiting && b != 0) { // if we receive a nonzero byte, we're ready to start the next frame
+            digitalWrite(9, LOW);
+            waiting = false;
+            point_count[which_point] = 0;
+        }
+        if (!waiting) {
+            cmd = (cmd << 8) | b; // build up a 32-bit command
+            if (++cmd_count == 4) { // see if we have a full command
+                cmd_count = 0; // reset the command counter
+                if (cmd == 0x01010101) { // if we receive a "done" command
+                    waiting = true; // go back to waiting
+                    digitalWrite(9, HIGH);
+                } else if (point_count[which_point] < MAX_PTS) {
+                    point_buffer[which_point][point_count[which_point]++] = cmd; // add the point to the buffer, then increment the point count
+                }
+            }
+        }
     }
 }
