@@ -140,21 +140,27 @@ void loop()
         if (brightness == 0) {
             dwell(x1, y1, 5);
         } else {
-            uint16_t x2 = (point_buffer[buf][(i + 1) % point_count[buf]] >> 12) & 0xfff;
-            uint16_t y2 = point_buffer[buf][(i + 1) % point_count[buf]] & 0xfff;
-            lineto(x1, y1, x2, y2);
+            uint16_t x2 = (point_buffer[buf][prev(i,  point_count[buf])] >> 12) & 0xfff;
+            uint16_t y2 = point_buffer[buf][prev(i,  point_count[buf])] & 0xfff;
+            lineto(x2, y2, x1, y1);
         }
     }
+}
+
+inline int prev(int i, int max) {
+    int prev = i - 1;
+    if (prev < 0) {
+        prev = max - 1;
+    }
+    return prev;
 }
 
 void dwell(uint16_t x, uint16_t y, uint8_t delay)
 {
     for (int i = 0; i < delay; i++) {
-        if (buffer_pos >= BUFFER_SIZE) // the code doesn't work without this. Not sure why.
-            Serial.println("Drawing with some stuff - " + String(buffer_pos) + " " + String(done));
-        if (done)
-            continue;
-
+        while (done) {
+            delayMicroseconds(5);
+        }
         if (i % 2 == 0) {
             DAC_data[!which_dma][buffer_pos++] = DAC_A | x;
         } else {
@@ -169,7 +175,6 @@ void dwell(uint16_t x, uint16_t y, uint8_t delay)
 // draw a line using breesenham
 void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 {
-    int times = 0;
     uint16_t dx = abs(x2 - x1);
     uint16_t dy = abs(y2 - y1);
     int8_t sx = x1 < x2 ? 1 : -1;
@@ -177,15 +182,6 @@ void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
     int32_t err = (dx > dy ? dx : -dy) / 2, e2; // TODO: make int16_t?
 
     for (;;) {
-        if (buffer_pos >= BUFFER_SIZE) // the code doesn't work without this. Not sure why.
-            Serial.println("Drawing with some stuff - " + String(x1) + " " + String(y1) + " " + buffer_pos + " " + done);
-        if (done)
-            continue;
-        times++;
-        if (times > 20000) {
-            Serial.println("Huh? - " + String(x1) + " " + String(y1) + " " + String(x2) + " " + String(y2) + " " + buffer_pos + " " + done);
-            break;
-        }
         if (x1 == x2 && y1 == y2) {
             break;
         }
@@ -194,15 +190,23 @@ void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
             err -= dy;
             x1 += sx;
             DAC_data[!which_dma][buffer_pos++] = DAC_A | x1;
+            if (buffer_pos >= BUFFER_SIZE) {
+                done_buffering();
+                while (done) {
+                    delayMicroseconds(5);
+                }
+            }
         }
-        if (buffer_pos >= BUFFER_SIZE) {
-            done_buffering();
-        } else if (e2 < dy) {
+
+        if (e2 < dy) {
             err += dx;
             y1 += sy;
             DAC_data[!which_dma][buffer_pos++] = DAC_B | y1;
             if (buffer_pos >= BUFFER_SIZE) {
                 done_buffering();
+                while (done) {
+                    delayMicroseconds(5);
+                }
             }
         }
     }
