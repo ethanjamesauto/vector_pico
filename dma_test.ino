@@ -21,7 +21,7 @@ Edited 1/28/2023 by Ethan James
 #include <stdio.h>
 
 // Size of each buffer
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 8192
 
 // Table of values to be sent to DAC
 unsigned short DAC_data[2][BUFFER_SIZE];
@@ -34,7 +34,6 @@ unsigned short* address_pointer = &DAC_data[0][0];
 #define DAC_B 0b1111000000000000
 
 // SPI configurations
-#define PIN_MISO 4
 #define PIN_CS 5
 #define PIN_SCK 6
 #define PIN_MOSI 7
@@ -56,7 +55,7 @@ void setup()
     spi_set_format(SPI_PORT, 16, (spi_cpol_t)0, (spi_cpha_t)0, (spi_order_t)0);
 
     // Map SPI signals to GPIO ports, acts like framed SPI with this CS mapping
-    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
+    // gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
     gpio_set_function(PIN_CS, GPIO_FUNC_SPI);
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
@@ -113,7 +112,7 @@ int point_pos = 0;
 int buffer_pos = 0;
 bool which_point = 0;
 bool which_dma = 1; // (which_dma) is read from by the data channel, and (!which_dma) is written to by the line drawing algorithm
-bool done = false; // true if the inactive buffer has been fully prepared and is ready to be sent over SPI
+static bool done = false; // true if the inactive buffer has been fully prepared and is ready to be sent over SPI
 
 // This function tells the line drawing algorithm to write to the buffer not being read from by the data channel.
 // Runs when the control channel has already finished setting up the data channel.
@@ -133,18 +132,44 @@ void control_complete()
 void loop()
 {
     bool buf = !which_point;
+    // Serial.println("Drawing frame with size " + String(point_count[buf]) + ", point 0 is " + String(point_buffer[buf][0]));
     for (int i = 0; i < point_count[buf]; i++) {
         uint16_t x1 = (point_buffer[buf][i] >> 12) & 0xfff;
         uint16_t y1 = point_buffer[buf][i] & 0xfff;
-        uint16_t x2 = (point_buffer[buf][(i + 1) % point_count[buf]] >> 12) & 0xfff;
-        uint16_t y2 = point_buffer[buf][(i + 1) % point_count[buf]] & 0xfff;
-        lineto(x1, y1, x2, y2);
+        uint8_t brightness = (point_buffer[buf][i] >> 24) & 0b111111;
+        if (brightness == 0) {
+            dwell(x1, y1, 5);
+        } else {
+            uint16_t x2 = (point_buffer[buf][(i + 1) % point_count[buf]] >> 12) & 0xfff;
+            uint16_t y2 = point_buffer[buf][(i + 1) % point_count[buf]] & 0xfff;
+            lineto(x1, y1, x2, y2);
+        }
+    }
+}
+
+void dwell(uint16_t x, uint16_t y, uint8_t delay)
+{
+    for (int i = 0; i < delay; i++) {
+        if (buffer_pos >= BUFFER_SIZE) // the code doesn't work without this. Not sure why.
+            Serial.println("Drawing with some stuff - " + String(buffer_pos) + " " + String(done));
+        if (done)
+            continue;
+
+        if (i % 2 == 0) {
+            DAC_data[!which_dma][buffer_pos++] = DAC_A | x;
+        } else {
+            DAC_data[!which_dma][buffer_pos++] = DAC_B | y;
+        }
+        if (buffer_pos >= BUFFER_SIZE) {
+            done_buffering();
+        }
     }
 }
 
 // draw a line using breesenham
 void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 {
+    int times = 0;
     uint16_t dx = abs(x2 - x1);
     uint16_t dy = abs(y2 - y1);
     int8_t sx = x1 < x2 ? 1 : -1;
@@ -154,8 +179,12 @@ void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
     for (;;) {
         if (buffer_pos >= BUFFER_SIZE) // the code doesn't work without this. Not sure why.
             Serial.println("Drawing with some stuff - " + String(x1) + " " + String(y1) + " " + buffer_pos + " " + done);
-        if (done) {
+        if (done)
             continue;
+        times++;
+        if (times > 20000) {
+            Serial.println("Huh? - " + String(x1) + " " + String(y1) + " " + String(x2) + " " + String(y2) + " " + buffer_pos + " " + done);
+            break;
         }
         if (x1 == x2 && y1 == y2) {
             break;
@@ -179,6 +208,7 @@ void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
     }
 }
 
+// stop writing to the buffer and wait for the data channel to start reading from it
 inline void done_buffering()
 {
     buffer_pos = 0;
@@ -192,11 +222,11 @@ void setup1()
     /*for (point_count[!which_point] = 0; point_count[!which_point] < 100; point_count[!which_point]++) {
         point_buffer[!which_point][point_count[!which_point]] = point_count[!which_point];
     }//*/
-    point_count[1] = 2;
-    point_buffer[1][0] = (20 << 12) | 10;
-    point_buffer[1][1] = (50 << 12) | 40;
-    // point_buffer[1][2] = (60 << 12) | 50;
-    // point_buffer[1][3] = (80 << 12) | 70;
+    point_count[1] = 4;
+    point_buffer[1][0] = (1 << 24) | (0 << 12) | 0;
+    point_buffer[1][1] = (1 << 24) | (4095 << 12) | 1000;
+    point_buffer[1][2] = (1 << 24) | (4095 << 12) | 4095;
+    point_buffer[1][3] = (1 << 24) | (1000 << 12) | 4095;
 }
 
 void loop1()
@@ -221,6 +251,9 @@ void loop1()
                 if (cmd == 0x01010101) { // if we receive a "done" command
                     waiting = true; // go back to waiting
                     digitalWrite(9, HIGH);
+                    which_point = !which_point; // switch to the other buffer
+                    // while (1)
+                    //   ; // halt forever
                 } else if (point_count[which_point] < MAX_PTS) {
                     point_buffer[which_point][point_count[which_point]++] = cmd; // add the point to the buffer, then increment the point count
                 }
