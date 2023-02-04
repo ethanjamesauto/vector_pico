@@ -3,7 +3,7 @@
  * This is a rough port of osresearch/vst for the Raspberry Pi Pico. It's still a work in progress and might not work correctly.
  */
 
-//Original header:
+// Original header:
 /**
  *  V. Hunter Adams (vha3)
                 Code based on examples from Raspberry Pi Co
@@ -25,7 +25,7 @@
 #include <stdio.h>
 
 // Size of each buffer
-#define BUFFER_SIZE 8192
+#define BUFFER_SIZE 2048
 
 // Table of values to be sent to DAC
 unsigned short DAC_data[2][BUFFER_SIZE];
@@ -33,7 +33,7 @@ unsigned short DAC_data[2][BUFFER_SIZE];
 // Pointer to the address of the DAC data table
 unsigned short* address_pointer = &DAC_data[0][0];
 
-// A-channel, 1x, active
+//bit masks for the 16-bit SPI dac control words
 #define DAC_A 0b0111000000000000
 #define DAC_B 0b1111000000000000
 
@@ -127,10 +127,11 @@ void control_complete()
 {
     if (!done) {
         Serial.println("Can't keep up, only reached point " + String(buffer_pos));
+    } else {
+        which_dma = !which_dma;
+        done = false;
     }
-    address_pointer = &DAC_data[which_dma][0];
-    which_dma = !which_dma;
-    done = false;
+    address_pointer = &DAC_data[!which_dma][0];
     dma_hw->ints0 = 1u << CTRL_CHANNEL;
 }
 
@@ -138,9 +139,9 @@ void loop()
 {
     bool buf = !which_point;
     // Serial.println("Drawing frame with size " + String(point_count[buf]) + ", point 0 is " + String(point_buffer[buf][0]));
-
     digitalWrite(FRAME_PIN, HIGH);
     bool pin = true;
+
     for (int i = 0; i < point_count[buf]; i++) {
         if (pin && i > point_count[buf] / 10) {
             digitalWrite(FRAME_PIN, LOW);
@@ -159,6 +160,7 @@ void loop()
     }
 }
 
+//TODO: maybe get rid of this, as the first point should always be a jump
 inline int prev(int i, int max)
 {
     int prev = i - 1;
@@ -229,7 +231,7 @@ inline void done_buffering()
     buffer_pos = 0;
     done = true;
     while (done) {
-        delayMicroseconds(20); // TODO: necessary to stop the loop from accessing memory all the time. Rework code so that this isn't necessary.
+        delayMicroseconds(20); // TODO: this is necessary to stop the loop from accessing memory all the time. Rework code so that this isn't necessary.
     };
 }
 
@@ -268,8 +270,6 @@ void loop1()
                     waiting = true; // go back to waiting
                     digitalWrite(9, HIGH);
                     which_point = !which_point; // switch to the other buffer
-                    // while (1)
-                    //   ; // halt forever
                 } else if (point_count[which_point] < MAX_PTS) {
                     point_buffer[which_point][point_count[which_point]++] = cmd; // add the point to the buffer, then increment the point count
                 }
