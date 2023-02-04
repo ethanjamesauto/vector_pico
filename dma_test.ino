@@ -1,4 +1,10 @@
 /**
+ * Ethan James (ethanjamesauto)
+ * This is a rough port of osresearch/vst for the Raspberry Pi Pico. It's still a work in progress and might not work correctly.
+ */
+
+//Original header:
+/**
  *  V. Hunter Adams (vha3)
                 Code based on examples from Raspberry Pi Co
                 Sets up two DMA channels. One sends samples at audio rate to
@@ -9,8 +15,6 @@
  data channel is chained to the control channel, so it is restarted as soon as
  the control channel finishes. The data channel is paced by a timer to perform
  transactions at audio rate.
-
-Edited 1/28/2023 by Ethan James
  */
 
 // TODO: include C:\\Users\\Ethan\\AppData\\Local\\Arduino15\\packages\\rp2040\\hardware\\rp2040\\2.7.1
@@ -39,6 +43,8 @@ unsigned short* address_pointer = &DAC_data[0][0];
 #define PIN_MOSI 7
 #define SPI_PORT spi0
 
+#define FRAME_PIN 8
+
 #define DATA_CHANNEL 0
 #define CTRL_CHANNEL 1
 
@@ -47,6 +53,7 @@ const uint32_t transfer_count = BUFFER_SIZE;
 
 void setup()
 {
+    pinMode(FRAME_PIN, OUTPUT);
     // Initialize SPI channel
     spi_init(SPI_PORT, 24000000);
 
@@ -120,12 +127,10 @@ void control_complete()
 {
     if (!done) {
         Serial.println("Can't keep up, only reached point " + String(buffer_pos));
-    } else {
-        address_pointer = &DAC_data[which_dma][0];
-        which_dma = !which_dma;
-        done = false;
-        // Serial.println("Sent some lines");
     }
+    address_pointer = &DAC_data[which_dma][0];
+    which_dma = !which_dma;
+    done = false;
     dma_hw->ints0 = 1u << CTRL_CHANNEL;
 }
 
@@ -133,21 +138,29 @@ void loop()
 {
     bool buf = !which_point;
     // Serial.println("Drawing frame with size " + String(point_count[buf]) + ", point 0 is " + String(point_buffer[buf][0]));
+
+    digitalWrite(FRAME_PIN, HIGH);
+    bool pin = true;
     for (int i = 0; i < point_count[buf]; i++) {
+        if (pin && i > point_count[buf] / 10) {
+            digitalWrite(FRAME_PIN, LOW);
+            pin = false;
+        }
         uint16_t x1 = (point_buffer[buf][i] >> 12) & 0xfff;
         uint16_t y1 = point_buffer[buf][i] & 0xfff;
         uint8_t brightness = (point_buffer[buf][i] >> 24) & 0b111111;
-        if (brightness == 0) {
+        if (brightness == 0 || i == 0) {
             dwell(x1, y1, 5);
         } else {
-            uint16_t x2 = (point_buffer[buf][prev(i,  point_count[buf])] >> 12) & 0xfff;
-            uint16_t y2 = point_buffer[buf][prev(i,  point_count[buf])] & 0xfff;
+            uint16_t x2 = (point_buffer[buf][prev(i, point_count[buf])] >> 12) & 0xfff;
+            uint16_t y2 = point_buffer[buf][prev(i, point_count[buf])] & 0xfff;
             lineto(x2, y2, x1, y1);
         }
     }
 }
 
-inline int prev(int i, int max) {
+inline int prev(int i, int max)
+{
     int prev = i - 1;
     if (prev < 0) {
         prev = max - 1;
@@ -158,9 +171,6 @@ inline int prev(int i, int max) {
 void dwell(uint16_t x, uint16_t y, uint8_t delay)
 {
     for (int i = 0; i < delay; i++) {
-        while (done) {
-            delayMicroseconds(5);
-        }
         if (i % 2 == 0) {
             DAC_data[!which_dma][buffer_pos++] = DAC_A | x;
         } else {
@@ -172,9 +182,16 @@ void dwell(uint16_t x, uint16_t y, uint8_t delay)
     }
 }
 
+#define DIV 10
+
 // draw a line using breesenham
 void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 {
+    x1 /= DIV;
+    y1 /= DIV;
+    x2 /= DIV;
+    y2 /= DIV;
+
     uint16_t dx = abs(x2 - x1);
     uint16_t dy = abs(y2 - y1);
     int8_t sx = x1 < x2 ? 1 : -1;
@@ -189,24 +206,18 @@ void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
         if (e2 > -dx) {
             err -= dy;
             x1 += sx;
-            DAC_data[!which_dma][buffer_pos++] = DAC_A | x1;
+            DAC_data[!which_dma][buffer_pos++] = DAC_A | (x1 * DIV);
             if (buffer_pos >= BUFFER_SIZE) {
                 done_buffering();
-                while (done) {
-                    delayMicroseconds(5);
-                }
             }
         }
 
         if (e2 < dy) {
             err += dx;
             y1 += sy;
-            DAC_data[!which_dma][buffer_pos++] = DAC_B | y1;
+            DAC_data[!which_dma][buffer_pos++] = DAC_B | (y1 * DIV);
             if (buffer_pos >= BUFFER_SIZE) {
                 done_buffering();
-                while (done) {
-                    delayMicroseconds(5);
-                }
             }
         }
     }
@@ -217,20 +228,21 @@ inline void done_buffering()
 {
     buffer_pos = 0;
     done = true;
+    while (done) {
+        delayMicroseconds(20); // TODO: necessary to stop the loop from accessing memory all the time. Rework code so that this isn't necessary.
+    };
 }
 
 void setup1()
 {
     Serial.begin();
     pinMode(9, OUTPUT);
-    /*for (point_count[!which_point] = 0; point_count[!which_point] < 100; point_count[!which_point]++) {
-        point_buffer[!which_point][point_count[!which_point]] = point_count[!which_point];
-    }//*/
-    point_count[1] = 4;
-    point_buffer[1][0] = (1 << 24) | (0 << 12) | 0;
-    point_buffer[1][1] = (1 << 24) | (4095 << 12) | 1000;
+    point_count[1] = 5;
+    point_buffer[1][0] = (0 << 24) | (0 << 12) | 0;
+    point_buffer[1][1] = (1 << 24) | (4095 << 12) | 0;
     point_buffer[1][2] = (1 << 24) | (4095 << 12) | 4095;
-    point_buffer[1][3] = (1 << 24) | (1000 << 12) | 4095;
+    point_buffer[1][3] = (1 << 24) | (0 << 12) | 4095;
+    point_buffer[1][4] = (1 << 24) | (0 << 12) | 0;
 }
 
 void loop1()
