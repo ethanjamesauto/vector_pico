@@ -33,7 +33,7 @@ unsigned short DAC_data[2][BUFFER_SIZE];
 // Pointer to the address of the DAC data table
 unsigned short* address_pointer = &DAC_data[0][0];
 
-//bit masks for the 16-bit SPI dac control words
+// bit masks for the 16-bit SPI dac control words
 #define DAC_A 0b0111000000000000
 #define DAC_B 0b1111000000000000
 
@@ -105,7 +105,7 @@ void setup()
     );
 
     dma_channel_set_irq0_enabled(CTRL_CHANNEL, true);
-    irq_set_exclusive_handler(DMA_IRQ_0, control_complete);
+    irq_set_exclusive_handler(DMA_IRQ_0, control_complete_isr);
     irq_set_enabled(DMA_IRQ_0, true);
 
     // start the control channel
@@ -121,9 +121,9 @@ bool which_point = 0;
 bool which_dma = 1; // (which_dma) is read from by the data channel, and (!which_dma) is written to by the line drawing algorithm
 static bool done = false; // true if the inactive buffer has been fully prepared and is ready to be sent over SPI
 
-// This function tells the line drawing algorithm to write to the buffer not being read from by the data channel.
+// This interrupt service routine tells the line drawing algorithm to write to the buffer not being read from by the data channel.
 // Runs when the control channel has already finished setting up the data channel.
-void control_complete()
+void control_complete_isr()
 {
     if (!done) {
         Serial.println("Can't keep up, only reached point " + String(buffer_pos));
@@ -160,7 +160,7 @@ void loop()
     }
 }
 
-//TODO: maybe get rid of this, as the first point should always be a jump
+// TODO: maybe get rid of this, as the first point should always be a jump
 inline int prev(int i, int max)
 {
     int prev = i - 1;
@@ -238,8 +238,8 @@ inline void done_buffering()
 void setup1()
 {
     Serial.begin();
-    pinMode(9, OUTPUT);
     point_count[1] = 5;
+    point_count[0] = 0;
     point_buffer[1][0] = (0 << 24) | (0 << 12) | 0;
     point_buffer[1][1] = (1 << 24) | (4095 << 12) | 0;
     point_buffer[1][2] = (1 << 24) | (4095 << 12) | 4095;
@@ -258,7 +258,6 @@ void loop1()
     while (Serial.available() > 0) {
         char b = Serial.read();
         if (waiting && b != 0) { // if we receive a nonzero byte, we're ready to start the next frame
-            digitalWrite(9, LOW);
             waiting = false;
             point_count[which_point] = 0;
         }
@@ -268,10 +267,16 @@ void loop1()
                 cmd_count = 0; // reset the command counter
                 if (cmd == 0x01010101) { // if we receive a "done" command
                     waiting = true; // go back to waiting
-                    digitalWrite(9, HIGH);
                     which_point = !which_point; // switch to the other buffer
                 } else if (point_count[which_point] < MAX_PTS) {
                     point_buffer[which_point][point_count[which_point]++] = cmd; // add the point to the buffer, then increment the point count
+                }
+                if (cmd == 0) {
+                    /*
+                    Somehow we reached the gap between one frame and another without recieving a done command.
+                    This can occur if the pico starts recieving data mid-frame and is unable to sync. If this happens, just go back to waiting for the next frame.
+                    */
+                    waiting = true;
                 }
             }
         }
