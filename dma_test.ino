@@ -25,7 +25,9 @@
 #include <stdio.h>
 
 // Size of each buffer
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 512
+
+#define SERIAL_LED 25
 
 // Table of values to be sent to DAC
 unsigned short DAC_data[2][BUFFER_SIZE];
@@ -47,6 +49,9 @@ unsigned short* address_pointer = &DAC_data[0][0];
 
 #define DATA_CHANNEL 0
 #define CTRL_CHANNEL 1
+
+uint8_t line_speed = 5;
+uint8_t jump_speed = 75;
 
 // Number of DMA transfers per event
 const uint32_t transfer_count = BUFFER_SIZE;
@@ -125,12 +130,12 @@ static bool done = false; // true if the inactive buffer has been fully prepared
 // Runs when the control channel has already finished setting up the data channel.
 void control_complete_isr()
 {
-    if (!done) {
+    /*if (!done) {
         Serial.println("Can't keep up, only reached point " + String(buffer_pos));
-    } else {
-        which_dma = !which_dma;
-        done = false;
-    }
+    }*/
+    which_dma = !which_dma;
+    // buffer_pos = 0;
+    done = false;
     address_pointer = &DAC_data[!which_dma][0];
     dma_hw->ints0 = 1u << CTRL_CHANNEL;
 }
@@ -151,11 +156,15 @@ void loop()
         uint16_t y1 = point_buffer[buf][i] & 0xfff;
         uint8_t brightness = (point_buffer[buf][i] >> 24) & 0b111111;
         if (brightness == 0 || i == 0) {
-            dwell(x1, y1, 5);
+            uint16_t x2 = (point_buffer[buf][prev(i, point_count[buf])] >> 12) & 0xfff;
+            uint16_t y2 = point_buffer[buf][prev(i, point_count[buf])] & 0xfff;
+            int dist = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
+            lineto(x2, y2, x1, y1, jump_speed);
+            dwell(x1, y1, dist / 10);
         } else {
             uint16_t x2 = (point_buffer[buf][prev(i, point_count[buf])] >> 12) & 0xfff;
             uint16_t y2 = point_buffer[buf][prev(i, point_count[buf])] & 0xfff;
-            lineto(x2, y2, x1, y1);
+            lineto(x2, y2, x1, y1, line_speed);
         }
     }
 }
@@ -184,15 +193,13 @@ void dwell(uint16_t x, uint16_t y, uint8_t delay)
     }
 }
 
-#define DIV 10
-
 // draw a line using breesenham
-void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
+void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t step)
 {
-    x1 /= DIV;
-    y1 /= DIV;
-    x2 /= DIV;
-    y2 /= DIV;
+    x1 /= step;
+    y1 /= step;
+    x2 /= step;
+    y2 /= step;
 
     uint16_t dx = abs(x2 - x1);
     uint16_t dy = abs(y2 - y1);
@@ -208,7 +215,7 @@ void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
         if (e2 > -dx) {
             err -= dy;
             x1 += sx;
-            DAC_data[!which_dma][buffer_pos++] = DAC_A | (x1 * DIV);
+            DAC_data[!which_dma][buffer_pos++] = DAC_A | (x1 * step);
             if (buffer_pos >= BUFFER_SIZE) {
                 done_buffering();
             }
@@ -217,7 +224,7 @@ void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
         if (e2 < dy) {
             err += dx;
             y1 += sy;
-            DAC_data[!which_dma][buffer_pos++] = DAC_B | (y1 * DIV);
+            DAC_data[!which_dma][buffer_pos++] = DAC_B | (y1 * step);
             if (buffer_pos >= BUFFER_SIZE) {
                 done_buffering();
             }
@@ -238,6 +245,7 @@ inline void done_buffering()
 void setup1()
 {
     Serial.begin();
+    pinMode(SERIAL_LED, OUTPUT);
     point_count[1] = 5;
     point_count[0] = 0;
     point_buffer[1][0] = (0 << 24) | (0 << 12) | 0;
@@ -256,6 +264,7 @@ void loop1()
 
     // read from Serial
     while (Serial.available() > 0) {
+        digitalWriteFast(SERIAL_LED, HIGH);
         char b = Serial.read();
         if (waiting && b != 0) { // if we receive a nonzero byte, we're ready to start the next frame
             waiting = false;
@@ -280,5 +289,6 @@ void loop1()
                 }
             }
         }
+        digitalWriteFast(SERIAL_LED, LOW);
     }
 }
