@@ -89,6 +89,40 @@ void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t step)
 */
 // This interrupt service routine tells the line drawing algorithm to write to the buffer not being read from by the data channel.
 // Runs when the control channel has already finished setting up the data channel.
+
+enum vector_sm_state { LINE_0,
+    LINE_1,
+    LINE_2
+};
+
+void vector_sm_execute(int i)
+{
+    static uint16_t x = 0;
+    static uint16_t y = 0;
+    //static bool dir = 1;
+    static int n = 0;
+    static vector_sm_state state = LINE_0;
+#define DAC_MAX 4095
+
+    switch (state) {
+    case LINE_0:
+        state = LINE_1;
+        break;
+    case LINE_1:
+        DAC_data[which_dma][i] = (i % 2) ? (DAC_X | n++) : (DAC_Y | (DAC_MAX - n++));
+        if (n == DAC_MAX) {
+            state = LINE_2;
+        }
+        break;
+    case LINE_2:
+        DAC_data[which_dma][i] = (i % 2) ? (DAC_X | n--) : (DAC_Y | (DAC_MAX - n--));
+        if (n == 0) {
+            state = LINE_1;
+        }
+        break;
+    }
+}
+
 void control_complete_isr()
 {
     // if (!done)
@@ -100,19 +134,8 @@ void control_complete_isr()
     static bool dir = 1;
     // dir = !dir;
     static int n = 0;
-    #define DAC_MAX 4095
     for (int i = 0; i < BUFFER_SIZE; i++) {
-        if (dir) {
-            DAC_data[which_dma][i] = (i % 2) ? (DAC_X | n++) : (DAC_Y | (DAC_MAX - n++));
-            if (n == DAC_MAX) {
-                dir = !dir;
-            }
-        } else {
-            DAC_data[which_dma][i] = (i % 2) ? (DAC_X | n--) : (DAC_Y | (DAC_MAX - n--));
-            if (n == 0) {
-                dir = !dir;
-            }
-        }
+        vector_sm_execute(i);
     }
     dma_hw->ints0 = 1u << CTRL_CHANNEL;
 }
