@@ -48,63 +48,6 @@ void loop()
 {
 }
 /*
-void loop()
-{
-    bool buf = which_dma;
-    // Serial.println("Drawing frame with size " + String(point_count[buf]) + ", point 0 is " + String(point_buffer[buf][0]));
-    digitalWrite(FRAME_PIN, HIGH);
-    bool pin = true;
-
-    for (int i = 0; i < point_count[buf]; i++) {
-        if (pin && i > point_count[buf] / 10) {
-            digitalWrite(FRAME_PIN, LOW);
-            pin = false;
-        }
-        uint16_t x1 = (point_buffer[buf][i] >> 12) & 0xfff;
-        uint16_t y1 = point_buffer[buf][i] & 0xfff;
-        uint8_t brightness = (point_buffer[buf][i] >> 24) & 0b111111;
-        if (brightness == 0 || i == 0) {
-            uint16_t x2 = (point_buffer[buf][prev(i, point_count[buf])] >> 12) & 0xfff;
-            uint16_t y2 = point_buffer[buf][prev(i, point_count[buf])] & 0xfff;
-            int dist = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
-            //lineto(x2, y2, x1, y1, jump_speed);
-            dwell(x1, y1, dist / 50);
-        } else {
-            uint16_t x2 = (point_buffer[buf][prev(i, point_count[buf])] >> 12) & 0xfff;
-            uint16_t y2 = point_buffer[buf][prev(i, point_count[buf])] & 0xfff;
-            lineto(x2, y2, x1, y1, line_speed);
-        }
-    }
-    if (frame_ready) {
-        which_point = !which_point; // switch to the other buffer
-        frame_ready = 0;
-    }
-}
-
-// TODO: maybe get rid of this, as the first point should always be a jump
-inline int prev(int i, int max)
-{
-    int prev = i - 1;
-    if (prev < 0) {
-        prev = max - 1;
-    }
-    return prev;
-}
-
-void dwell(uint16_t x, uint16_t y, uint8_t delay)
-{
-    for (int i = 0; i < delay; i++) {
-        if (i % 2 == 0) {
-            DAC_data[!which_dma][buffer_pos++] = DAC_X | x;
-        } else {
-            DAC_data[!which_dma][buffer_pos++] = DAC_Y | y;
-        }
-        if (buffer_pos >= BUFFER_SIZE) {
-            done_buffering();
-        }
-    }
-}
-
 // draw a line using breesenham
 void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t step)
 {
@@ -157,7 +100,7 @@ void control_complete_isr()
     static bool dir = 1;
     // dir = !dir;
     static int n = 0;
-    #define DAC_MAX 4000
+    #define DAC_MAX 4095
     for (int i = 0; i < BUFFER_SIZE; i++) {
         if (dir) {
             DAC_data[which_dma][i] = (i % 2) ? (DAC_X | n++) : (DAC_Y | (DAC_MAX - n++));
