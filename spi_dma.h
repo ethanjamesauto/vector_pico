@@ -5,7 +5,7 @@
 #define CTRL_CHANNEL 1
 
 // Size of each buffer
-#define BUFFER_SIZE 2048
+#define BUFFER_SIZE 50
 
 // Number of DMA transfers per event
 const uint32_t transfer_count = BUFFER_SIZE;
@@ -17,8 +17,8 @@ unsigned short DAC_data[2][BUFFER_SIZE];
 unsigned short* address_pointer = &DAC_data[0][0];
 
 // bit masks for the 16-bit SPI dac control words
-#define DAC_A 0b0111000000000000
-#define DAC_B 0b1111000000000000
+#define DAC_X 0b0111000000000000
+#define DAC_Y 0b1111000000000000
 
 // SPI configurations
 #define PIN_CS 5
@@ -26,26 +26,15 @@ unsigned short* address_pointer = &DAC_data[0][0];
 #define PIN_MOSI 7
 #define SPI_PORT spi0
 
-bool which_dma = 1; // (which_dma) is read from by the data channel, and (!which_dma) is written to by the line drawing algorithm
+bool which_dma = 0; // (!which_dma) is read from by the data channel, and (which_dma) is written to by the line drawing algorithm
 static bool done = false; // true if the inactive buffer has been fully prepared and is ready to be sent over SPI
 int buffer_pos = 0;
 
-// This interrupt service routine tells the line drawing algorithm to write to the buffer not being read from by the data channel.
-// Runs when the control channel has already finished setting up the data channel.
-void control_complete_isr()
-{
-    // if (!done)
-    //     Serial.println("Can't keep up, only reached point " + String(buffer_pos));
-    which_dma = !which_dma;
-    // buffer_pos = 0;
-    done = false;
-    address_pointer = &DAC_data[!which_dma][0];
-    dma_hw->ints0 = 1u << CTRL_CHANNEL;
-}
+void control_complete_isr();
 
 inline void spi_dma_init()
 {
-    spi_init(SPI_PORT, 24000000);
+    spi_init(SPI_PORT, 20000000);
 
     // Format SPI channel (channel, data bits per transfer, polarity, phase,
     // order)
@@ -100,16 +89,4 @@ inline void spi_dma_init()
 
     // start the control channel
     dma_start_channel_mask(1u << CTRL_CHANNEL);
-}
-
-//wait until the dma transfer is done before writing to the next buffer
-inline void done_buffering()
-{
-    buffer_pos = 0;
-    done = true;
-    while (done) {
-        // TODO: this is necessary to stop the loop from accessing memory all of the time.
-        // Rework code so that this isn't necessary.
-        delayMicroseconds(5);
-    }
 }
