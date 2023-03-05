@@ -25,13 +25,15 @@
 #define FRAME_PIN 8
 #define MAX_PTS 4096 
 
-uint8_t line_speed = 5;
-uint8_t jump_speed = 75;
+uint16_t line_speed = 3;
+uint16_t jump_speed = 150;
 
 uint32_t point_buffer[2][MAX_PTS];
 int point_count[2];
 int point_pos = 0;
 bool which_point = 0;
+
+bool frame_ready = 0;
 
 void setup()
 {
@@ -58,13 +60,17 @@ void loop()
             uint16_t x2 = (point_buffer[buf][prev(i, point_count[buf])] >> 12) & 0xfff;
             uint16_t y2 = point_buffer[buf][prev(i, point_count[buf])] & 0xfff;
             int dist = sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
-            lineto(x2, y2, x1, y1, jump_speed);
-            dwell(x1, y1, dist / 10);
+            //lineto(x2, y2, x1, y1, jump_speed);
+            dwell(x1, y1, dist / 50);
         } else {
             uint16_t x2 = (point_buffer[buf][prev(i, point_count[buf])] >> 12) & 0xfff;
             uint16_t y2 = point_buffer[buf][prev(i, point_count[buf])] & 0xfff;
             lineto(x2, y2, x1, y1, line_speed);
         }
+    }
+    if (frame_ready) {
+        which_point = !which_point; // switch to the other buffer
+        frame_ready = 0;
     }
 }
 
@@ -93,7 +99,7 @@ void dwell(uint16_t x, uint16_t y, uint8_t delay)
 }
 
 // draw a line using breesenham
-void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint8_t step)
+void lineto(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t step)
 {
     x1 /= step;
     y1 /= step;
@@ -151,11 +157,13 @@ void loop1()
     static bool waiting = true;
 
     // read from Serial
+    if (!frame_ready)
     while (Serial.available() > 0) {
         digitalWriteFast(SERIAL_LED, HIGH);
         char b = Serial.read();
         if (waiting && b != 0) { // if we receive a nonzero byte, we're ready to start the next frame
             waiting = false;
+            //frame_ready = 0;
             point_count[which_point] = 0;
         }
         if (!waiting) {
@@ -163,8 +171,8 @@ void loop1()
             if (++cmd_count == 4) { // see if we have a full command
                 cmd_count = 0; // reset the command counter
                 if (cmd == 0x01010101) { // if we receive a "done" command
+                    frame_ready = 1;
                     waiting = true; // go back to waiting
-                    which_point = !which_point; // switch to the other buffer
                 } else if (point_count[which_point] < MAX_PTS) {
                     point_buffer[which_point][point_count[which_point]++] = cmd; // add the point to the buffer, then increment the point count
                 }
@@ -179,4 +187,5 @@ void loop1()
         }
         digitalWriteFast(SERIAL_LED, LOW);
     }
+    delayMicroseconds(200);
 }

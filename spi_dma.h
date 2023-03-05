@@ -5,7 +5,7 @@
 #define CTRL_CHANNEL 1
 
 // Size of each buffer
-#define BUFFER_SIZE 512
+#define BUFFER_SIZE 2048
 
 // Number of DMA transfers per event
 const uint32_t transfer_count = BUFFER_SIZE;
@@ -110,6 +110,6 @@ inline void done_buffering()
     while (done) {
         // TODO: this is necessary to stop the loop from accessing memory all of the time.
         // Rework code so that this isn't necessary.
-        delayMicroseconds(20);
+        delayMicroseconds(5);
     }
 }
