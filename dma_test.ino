@@ -60,7 +60,7 @@ enum vector_sm_state { START,
     JUMP
 };
 
-#define step 18
+#define STEP 18
 
 inline void vector_sm_execute() __attribute__((always_inline));
 inline void vector_sm_execute()
@@ -74,7 +74,7 @@ inline void vector_sm_execute()
     // James algorithm variables
     static int32_t x1, y1;
     static int32_t dx, dy;
-    static int32_t tmp, mult, b, n;
+    static int32_t tmp, mult, b, n, step;
 
     for (int i = 0; i < BUFFER_SIZE;) {
         switch (state) {
@@ -90,159 +90,70 @@ inline void vector_sm_execute()
             }
             if (abs(dx) >= abs(dy)) {
                 tmp = x * dy;
-                mult = step * dy;
                 b = -dy * x1 / dx + y1;
-                if (dx >= 0)
-                    state = LINE_10;
-                else
-                    state = LINE_20;
+                step = dx > 0 ? STEP : -STEP;
+                x -= step - dx % step;
+                mult = step * dy;
+                goto line_10;
             } else {
                 tmp = y * dx;
-                mult = step * dx;
                 b = -dx * y1 / dy + x1;
-                if (dy > 0)
-                    state = LINE_30;
-                else
-                    state = LINE_40;
+                step = dy > 0 ? STEP : -STEP;
+                y -= step - dy % step;
+                mult = step * dx;
+                goto line_20;
             }
             break;
         case LINE_10:
-            while (1) {
-                x += step;
-                if (x >= x1) {
-                    x = x1;
-                    y = y1;
-                    // draw the last point
-                    goto next_point;
-                }
-                tmp += mult;
-                n = tmp / dx + b;
-                DAC_data[which_dma][i++] = DAC_X | x;
-                if (i == BUFFER_SIZE) {
-                    state = LINE_11;
-                    return;
-                }
-                if (n != y) {
-                    y = n;
-                    DAC_data[which_dma][i++] = DAC_Y | y;
-                    if (i == BUFFER_SIZE) {
-                        return;
-                    }
-                }
+        line_10:
+            x += step;
+            if (x == x1) {
+                y = y1;
+                // draw the last point
+                goto next_point;
+            }
+            tmp += mult;
+            n = tmp / dx + b;
+            DAC_data[which_dma][i++] = DAC_X | x;
+            if (i == BUFFER_SIZE) {
+                state = LINE_11;
+                return;
             }
         case LINE_11:
-            state = LINE_10;
             if (n != y) {
                 y = n;
                 DAC_data[which_dma][i++] = DAC_Y | y;
                 if (i == BUFFER_SIZE) {
+                    state = LINE_10;
                     return;
                 }
             }
-            break;
+            goto line_10;
         case LINE_20:
-            while (1) {
-                x -= step;
-                if (x <= x1) {
-                    x = x1;
-                    y = y1;
-                    // draw the last point
-                    goto next_point;
-                }
-                tmp -= mult;
-                n = tmp / dx + b;
-                DAC_data[which_dma][i++] = DAC_X | x;
-                if (i == BUFFER_SIZE) {
-                    state = LINE_21;
-                    return;
-                }
-                if (n != y) {
-                    y = n;
-                    DAC_data[which_dma][i++] = DAC_Y | y;
-                    if (i == BUFFER_SIZE) {
-                        return;
-                    }
-                }
+        line_20:
+            y += step;
+            if (y == y1) {
+                x = x1;
+                // draw the last point
+                goto next_point;
+            }
+            tmp += mult;
+            n = tmp / dy + b;
+            DAC_data[which_dma][i++] = DAC_Y | y;
+            if (i == BUFFER_SIZE) {
+                state = LINE_21;
+                return;
             }
         case LINE_21:
-            state = LINE_20;
-            if (n != y) {
-                y = n;
-                DAC_data[which_dma][i++] = DAC_Y | y;
-                if (i == BUFFER_SIZE) {
-                    return;
-                }
-            }
-            break;
-        case LINE_30:
-            while (1) {
-                y += step;
-                if (y >= y1) {
-                    x = x1;
-                    y = y1;
-                    // draw the last point
-                    goto next_point;
-                }
-                tmp += mult;
-                n = tmp / dy + b;
-                DAC_data[which_dma][i++] = DAC_Y | y;
-                if (i == BUFFER_SIZE) {
-                    state = LINE_31;
-                    return;
-                }
-                if (n != x) {
-                    x = n;
-                    DAC_data[which_dma][i++] = DAC_X | x;
-                    if (i == BUFFER_SIZE) {
-                        return;
-                    }
-                }
-            }
-        case LINE_31:
-            state = LINE_30;
             if (n != x) {
                 x = n;
                 DAC_data[which_dma][i++] = DAC_X | x;
                 if (i == BUFFER_SIZE) {
+                    state = LINE_20;
                     return;
                 }
             }
-            break;
-        case LINE_40:
-            while (1) {
-                y -= step;
-                if (y <= y1) {
-                    x = x1;
-                    y = y1;
-                    // draw the last point
-                    goto next_point;
-                }
-                tmp -= mult;
-                n = tmp / dy + b;
-                DAC_data[which_dma][i++] = DAC_Y | y;
-                if (i == BUFFER_SIZE) {
-                    state = LINE_41;
-                    return;
-                }
-                if (n != x) {
-                    x = n;
-                    DAC_data[which_dma][i++] = DAC_X | x;
-                    if (i == BUFFER_SIZE) {
-                        return;
-                    }
-                }
-            }
-        case LINE_41:
-            state = LINE_40;
-            if (n != x) {
-                x = n;
-                DAC_data[which_dma][i++] = DAC_X | x;
-                if (i == BUFFER_SIZE) {
-                    return;
-                }
-            }
-            break;
-        default:
+            goto line_20;
         next_point:
             point++;
             if (point >= point_count[POINT_READ])
