@@ -18,6 +18,7 @@
  */
 // TODO: include C:\\Users\\Ethan\\AppData\\Local\\Arduino15\\packages\\rp2040\\hardware\\rp2040\\2.7.1
 
+#include "hardware/divider.h"
 #include "spi_dma.h"
 #include <math.h>
 
@@ -71,7 +72,7 @@ inline void vector_sm_execute()
     // James algorithm variables
     static int32_t x1, y1;
     static int32_t dx, dy;
-    static int32_t tmp, mult, b, n, step; //TODO: will tmp overflow?
+    static int32_t tmp, mult, b, n, step; // TODO: will tmp overflow?
 
     for (int i = 0; i < BUFFER_SIZE;) {
         switch (state) {
@@ -100,14 +101,15 @@ inline void vector_sm_execute()
             break;
         case LINE_10:
         line_10:
-            x += step;
             tmp += mult;
-            n = tmp / dx + b;
+            hw_divider_divmod_s32_start(tmp, dx);
+            x += step;
             DAC_data[which_dma][i++] = DAC_X | x;
             if (i == BUFFER_SIZE) {
                 state = LINE_11;
                 return;
             }
+            n = hw_divider_s32_quotient_wait() + b;
         case LINE_11:
             if (x == x1) {
                 y = y1;
@@ -129,14 +131,15 @@ inline void vector_sm_execute()
             goto line_10;
         case LINE_20:
         line_20:
-            y += step;
             tmp += mult;
-            n = tmp / dy + b;
+            hw_divider_divmod_s32_start(tmp, dy);
+            y += step;
             DAC_data[which_dma][i++] = DAC_Y | y;
             if (i == BUFFER_SIZE) {
                 state = LINE_21;
                 return;
             }
+            n = hw_divider_s32_quotient_wait() + b;
         case LINE_21:
             if (y == y1) {
                 x = x1;
