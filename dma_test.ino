@@ -51,13 +51,10 @@ void loop()
 enum vector_sm_state { START,
     LINE_10,
     LINE_20,
-    LINE_30,
-    LINE_40,
     LINE_11,
     LINE_21,
-    LINE_31,
-    LINE_41,
-    JUMP
+    NEXT_POINT,
+    JUMP,
 };
 
 #define STEP 18
@@ -74,7 +71,7 @@ inline void vector_sm_execute()
     // James algorithm variables
     static int32_t x1, y1;
     static int32_t dx, dy;
-    static int32_t tmp, mult, b, n, step;
+    static int32_t tmp, mult, b, n, step; //TODO: will tmp overflow?
 
     for (int i = 0; i < BUFFER_SIZE;) {
         switch (state) {
@@ -85,9 +82,6 @@ inline void vector_sm_execute()
             y1 = point_buffer[POINT_READ][point] & 0xfff;
             dx = x1 - x;
             dy = y1 - y;
-            if (dx == 0 && dy == 0) {
-                goto next_point;
-            }
             if (abs(dx) >= abs(dy)) {
                 tmp = x * dy;
                 b = -dy * x1 / dx + y1;
@@ -107,11 +101,6 @@ inline void vector_sm_execute()
         case LINE_10:
         line_10:
             x += step;
-            if (x == x1) {
-                y = y1;
-                // draw the last point
-                goto next_point;
-            }
             tmp += mult;
             n = tmp / dx + b;
             DAC_data[which_dma][i++] = DAC_X | x;
@@ -120,6 +109,15 @@ inline void vector_sm_execute()
                 return;
             }
         case LINE_11:
+            if (x == x1) {
+                y = y1;
+                DAC_data[which_dma][i++] = DAC_Y | y;
+                if (i == BUFFER_SIZE) {
+                    state = NEXT_POINT;
+                    return;
+                }
+                goto next_point;
+            }
             if (n != y) {
                 y = n;
                 DAC_data[which_dma][i++] = DAC_Y | y;
@@ -132,11 +130,6 @@ inline void vector_sm_execute()
         case LINE_20:
         line_20:
             y += step;
-            if (y == y1) {
-                x = x1;
-                // draw the last point
-                goto next_point;
-            }
             tmp += mult;
             n = tmp / dy + b;
             DAC_data[which_dma][i++] = DAC_Y | y;
@@ -145,6 +138,15 @@ inline void vector_sm_execute()
                 return;
             }
         case LINE_21:
+            if (y == y1) {
+                x = x1;
+                DAC_data[which_dma][i++] = DAC_X | x;
+                if (i == BUFFER_SIZE) {
+                    state = NEXT_POINT;
+                    return;
+                }
+                goto next_point;
+            }
             if (n != x) {
                 x = n;
                 DAC_data[which_dma][i++] = DAC_X | x;
@@ -154,6 +156,7 @@ inline void vector_sm_execute()
                 }
             }
             goto line_20;
+        case NEXT_POINT:
         next_point:
             point++;
             if (point >= point_count[POINT_READ])
