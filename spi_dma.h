@@ -5,7 +5,7 @@
 #define CTRL_CHANNEL 1
 
 // Size of each buffer
-#define BUFFER_SIZE 32
+#define BUFFER_SIZE 4096
 
 // Number of DMA transfers per event
 const uint32_t transfer_count = BUFFER_SIZE;

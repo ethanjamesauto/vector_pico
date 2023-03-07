@@ -50,110 +50,212 @@ void loop()
 
 enum vector_sm_state { START,
     LINE_10,
+    LINE_20,
+    LINE_30,
+    LINE_40,
     LINE_11,
-    LINE_X,
-    LINE_Y,
-    LINE_DONE,
+    LINE_21,
+    LINE_31,
+    LINE_41,
     JUMP
 };
 
-#define JUMP_SPEED 8
-#define DRAW_SPEED 3
+#define step 20
 
-inline void vector_sm_execute(int i) __attribute__((always_inline));
-inline void vector_sm_execute(int i)
+inline void vector_sm_execute() __attribute__((always_inline));
+inline void vector_sm_execute()
 {
-    static uint16_t x = 0;
-    static uint16_t y = 0;
+    static int32_t x = 0;
+    static int32_t y = 0;
     static vector_sm_state state = START;
-    static uint16_t point = 0;
-    static uint16_t jump_ctr;
+    static uint32_t point = 0;
     static uint8_t brightness;
 
-    // breesenham variables
-    static int32_t dx, dy, sx, sy, err, e2; // TODO: maybe change the types
-    static uint16_t x1, y1;
-    for (int k = 0; k < 1000; k++) {
+    // James algorithm variables
+    static int32_t x1, y1;
+    static int32_t dx, dy;
+    static int32_t tmp, mult, b, n;
+
+    for (int i = 0; i < BUFFER_SIZE;) {
         switch (state) {
         case START:
-            if (point_count[POINT_READ] == 0) {
-                state = LINE_DONE;
-                break;
-            }
+        start:
             brightness = (point_buffer[POINT_READ][point] >> 24) & 0x3f;
-            x1 = ((point_buffer[POINT_READ][point] >> 12) & 0xfff);
-            y1 = (point_buffer[POINT_READ][point] & 0xfff);
-            if (brightness == 0 || point == 0) {
-                jump_ctr = ((abs(x1 - x) + abs(y1 - y)) >> JUMP_SPEED) + 2;
-                state = JUMP;
-                break;
-            }
-            x1 >>= DRAW_SPEED;
-            y1 >>= DRAW_SPEED;
-            x >>= DRAW_SPEED;
-            y >>= DRAW_SPEED;
-            dx = abs(x1 - x);
-            dy = abs(y1 - y);
-            sx = x < x1 ? 1 : -1;
-            sy = y < y1 ? 1 : -1;
-            err = (dx > dy ? dx : -dy) / 2;
-            state = LINE_10;
-            break;
-        case JUMP:
-            if (jump_ctr <= 0) {
-                x = x1;
-                y = y1;
+            x1 = (point_buffer[POINT_READ][point] >> 12) & 0xfff;
+            y1 = point_buffer[POINT_READ][point] & 0xfff;
+            dx = x1 - x;
+            dy = y1 - y;
+            if (dx == 0 && dy == 0) {
                 point++;
-                if (point >= point_count[POINT_READ]) {
+                if (point >= point_count[POINT_READ])
                     point = 0;
-                }
-                state = START;
-                break;
+                goto start;
             }
-            jump_ctr--;
-            if (jump_ctr % 2 == 0) {
-                DAC_data[which_dma][i] = DAC_X | x1;
+            if (abs(dx) >= abs(dy)) {
+                tmp = x * dy;
+                mult = step * dy;
+                b = -dy * x1 / dx + y1;
+                if (dx >= 0)
+                    state = LINE_10;
+                else
+                    state = LINE_20;
             } else {
-                DAC_data[which_dma][i] = DAC_Y | y1;
+                tmp = y * dx;
+                mult = step * dx;
+                b = -dx * y1 / dy + x1;
+                if (dy > 0)
+                    state = LINE_30;
+                else
+                    state = LINE_40;
             }
-            return;
-        case LINE_X:
-            break;
-        case LINE_Y:
             break;
         case LINE_10:
-            if (x == x1 && y == y1) {
-                state = LINE_DONE;
-                break;
+            while (1) {
+                x += step;
+                if (x >= x1) {
+                    x = x1;
+                    y = y1;
+                    // draw the last point
+                    point++;
+                    if (point >= point_count[POINT_READ])
+                        point = 0;
+                    goto start;
+                }
+                tmp += mult;
+                n = tmp / dx + b;
+                DAC_data[which_dma][i++] = DAC_X | x;
+                if (i == BUFFER_SIZE) {
+                    state = LINE_11;
+                    return;
+                }
+                if (n != y) {
+                    y = n;
+                    DAC_data[which_dma][i++] = DAC_Y | y;
+                    if (i == BUFFER_SIZE) {
+                        return;
+                    }
+                }
             }
-            e2 = err;
-            if (e2 > -dx) {
-                err -= dy;
-                x += sx;
-                DAC_data[which_dma][i] = DAC_X | (x << DRAW_SPEED);
-                state = LINE_11;
-                return;
-            }
-            state = LINE_11;
-            break;
         case LINE_11:
-            if (e2 < dy) {
-                err += dx;
-                y += sy;
-                DAC_data[which_dma][i] = DAC_Y | (y << DRAW_SPEED);
-                state = LINE_10;
-                return;
-            }
             state = LINE_10;
-            break;
-        case LINE_DONE:
-            x = (point_buffer[POINT_READ][point] >> 12) & 0xfff;
-            y = point_buffer[POINT_READ][point] & 0xfff;
-            point++;
-            if (point >= point_count[POINT_READ]) {
-                point = 0;
+            if (n != y) {
+                y = n;
+                DAC_data[which_dma][i++] = DAC_Y | y;
+                if (i == BUFFER_SIZE) {
+                    return;
+                }
             }
-            state = START;
+            break;
+        case LINE_20:
+            while (1) {
+                x -= step;
+                if (x <= x1) {
+                    x = x1;
+                    y = y1;
+                    // draw the last point
+                    point++;
+                    if (point >= point_count[POINT_READ])
+                        point = 0;
+                    goto start;
+                }
+                tmp -= mult;
+                n = tmp / dx + b;
+                DAC_data[which_dma][i++] = DAC_X | x;
+                if (i == BUFFER_SIZE) {
+                    state = LINE_21;
+                    return;
+                }
+                if (n != y) {
+                    y = n;
+                    DAC_data[which_dma][i++] = DAC_Y | y;
+                    if (i == BUFFER_SIZE) {
+                        return;
+                    }
+                }
+            }
+        case LINE_21:
+            state = LINE_20;
+            if (n != y) {
+                y = n;
+                DAC_data[which_dma][i++] = DAC_Y | y;
+                if (i == BUFFER_SIZE) {
+                    return;
+                }
+            }
+            break;
+        case LINE_30:
+            while (1) {
+                y += step;
+                if (y >= y1) {
+                    x = x1;
+                    y = y1;
+                    // draw the last point
+                    point++;
+                    if (point >= point_count[POINT_READ])
+                        point = 0;
+                    goto start;
+                }
+                tmp += mult;
+                n = tmp / dy + b;
+                DAC_data[which_dma][i++] = DAC_Y | y;
+                if (i == BUFFER_SIZE) {
+                    state = LINE_31;
+                    return;
+                }
+                if (n != x) {
+                    x = n;
+                    DAC_data[which_dma][i++] = DAC_X | x;
+                    if (i == BUFFER_SIZE) {
+                        return;
+                    }
+                }
+            }
+        case LINE_31:
+            state = LINE_30;
+            if (n != x) {
+                x = n;
+                DAC_data[which_dma][i++] = DAC_X | x;
+                if (i == BUFFER_SIZE) {
+                    return;
+                }
+            }
+            break;
+        case LINE_40:
+            while (1) {
+                y -= step;
+                if (y <= y1) {
+                    x = x1;
+                    y = y1;
+                    // draw the last point
+                    point++;
+                    if (point >= point_count[POINT_READ])
+                        point = 0;
+                    goto start;
+                }
+                tmp -= mult;
+                n = tmp / dy + b;
+                DAC_data[which_dma][i++] = DAC_Y | y;
+                if (i == BUFFER_SIZE) {
+                    state = LINE_41;
+                    return;
+                }
+                if (n != x) {
+                    x = n;
+                    DAC_data[which_dma][i++] = DAC_X | x;
+                    if (i == BUFFER_SIZE) {
+                        return;
+                    }
+                }
+            }
+        case LINE_41:
+            state = LINE_40;
+            if (n != x) {
+                x = n;
+                DAC_data[which_dma][i++] = DAC_X | x;
+                if (i == BUFFER_SIZE) {
+                    return;
+                }
+            }
             break;
         }
     }
@@ -170,9 +272,7 @@ void control_complete_isr()
     static bool dir = 1;
     // dir = !dir;
     static int n = 0;
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        vector_sm_execute(i);
-    }
+    vector_sm_execute();
     dma_hw->ints0 = 1u << CTRL_CHANNEL;
 }
 
