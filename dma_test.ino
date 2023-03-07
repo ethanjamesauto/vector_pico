@@ -60,7 +60,7 @@ enum vector_sm_state { START,
     JUMP
 };
 
-#define step 20
+#define step 18
 
 inline void vector_sm_execute() __attribute__((always_inline));
 inline void vector_sm_execute()
@@ -86,10 +86,7 @@ inline void vector_sm_execute()
             dx = x1 - x;
             dy = y1 - y;
             if (dx == 0 && dy == 0) {
-                point++;
-                if (point >= point_count[POINT_READ])
-                    point = 0;
-                goto start;
+                goto next_point;
             }
             if (abs(dx) >= abs(dy)) {
                 tmp = x * dy;
@@ -116,10 +113,7 @@ inline void vector_sm_execute()
                     x = x1;
                     y = y1;
                     // draw the last point
-                    point++;
-                    if (point >= point_count[POINT_READ])
-                        point = 0;
-                    goto start;
+                    goto next_point;
                 }
                 tmp += mult;
                 n = tmp / dx + b;
@@ -153,10 +147,7 @@ inline void vector_sm_execute()
                     x = x1;
                     y = y1;
                     // draw the last point
-                    point++;
-                    if (point >= point_count[POINT_READ])
-                        point = 0;
-                    goto start;
+                    goto next_point;
                 }
                 tmp -= mult;
                 n = tmp / dx + b;
@@ -190,10 +181,7 @@ inline void vector_sm_execute()
                     x = x1;
                     y = y1;
                     // draw the last point
-                    point++;
-                    if (point >= point_count[POINT_READ])
-                        point = 0;
-                    goto start;
+                    goto next_point;
                 }
                 tmp += mult;
                 n = tmp / dy + b;
@@ -227,10 +215,7 @@ inline void vector_sm_execute()
                     x = x1;
                     y = y1;
                     // draw the last point
-                    point++;
-                    if (point >= point_count[POINT_READ])
-                        point = 0;
-                    goto start;
+                    goto next_point;
                 }
                 tmp -= mult;
                 n = tmp / dy + b;
@@ -257,6 +242,12 @@ inline void vector_sm_execute()
                 }
             }
             break;
+        default:
+        next_point:
+            point++;
+            if (point >= point_count[POINT_READ])
+                point = 0;
+            goto start;
         }
     }
 }
