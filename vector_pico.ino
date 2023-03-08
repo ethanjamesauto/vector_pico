@@ -93,18 +93,18 @@ inline void vector_sm_execute()
                 step = dx > 0 ? STEP : -STEP;
                 x -= step - dx % step;
                 mult = step * dy;
-                goto line_10;
+                goto line_x_0;
             } else {
                 tmp = y * dx;
                 b = -dx * y1 / dy + x1;
                 step = dy > 0 ? STEP : -STEP;
                 y -= step - dy % step;
                 mult = step * dx;
-                goto line_20;
+                goto line_y_0;
             }
             break;
         case LINE_X_0:
-        line_10:
+        line_x_0:
             tmp += mult;
             hw_divider_divmod_s32_start(tmp, dx);
             x += step;
@@ -132,9 +132,9 @@ inline void vector_sm_execute()
                     return;
                 }
             }
-            goto line_10;
+            goto line_x_0;
         case LINE_X_1:
-        line_20:
+        line_y_0:
             tmp += mult;
             hw_divider_divmod_s32_start(tmp, dy);
             y += step;
@@ -162,7 +162,7 @@ inline void vector_sm_execute()
                     return;
                 }
             }
-            goto line_20;
+            goto line_y_0;
         case NEXT_POINT:
         next_point:
             point++;
