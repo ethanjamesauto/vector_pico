@@ -50,10 +50,10 @@ void loop()
 }
 
 enum vector_sm_state { START,
-    LINE_10,
-    LINE_20,
-    LINE_11,
-    LINE_21,
+    LINE_X_0,
+    LINE_X_1,
+    LINE_Y_0,
+    LINE_Y_1,
     NEXT_POINT,
     JUMP,
 };
@@ -103,7 +103,7 @@ inline void vector_sm_execute()
                 goto line_20;
             }
             break;
-        case LINE_10:
+        case LINE_X_0:
         line_10:
             tmp += mult;
             hw_divider_divmod_s32_start(tmp, dx);
@@ -111,10 +111,10 @@ inline void vector_sm_execute()
             DAC_data[which_dma][i++] = DAC_X | x;
             n = hw_divider_s32_quotient_wait() + b;
             if (i == BUFFER_SIZE) {
-                state = LINE_11;
+                state = LINE_Y_0;
                 return;
             }
-        case LINE_11:
+        case LINE_Y_0:
             if (x == x1) {
                 y = y1;
                 DAC_data[which_dma][i++] = DAC_Y | y;
@@ -128,12 +128,12 @@ inline void vector_sm_execute()
                 y = n;
                 DAC_data[which_dma][i++] = DAC_Y | y;
                 if (i == BUFFER_SIZE) {
-                    state = LINE_10;
+                    state = LINE_X_0;
                     return;
                 }
             }
             goto line_10;
-        case LINE_20:
+        case LINE_X_1:
         line_20:
             tmp += mult;
             hw_divider_divmod_s32_start(tmp, dy);
@@ -141,10 +141,10 @@ inline void vector_sm_execute()
             DAC_data[which_dma][i++] = DAC_Y | y;
             n = hw_divider_s32_quotient_wait() + b;
             if (i == BUFFER_SIZE) {
-                state = LINE_21;
+                state = LINE_Y_1;
                 return;
             }
-        case LINE_21:
+        case LINE_Y_1:
             if (y == y1) {
                 x = x1;
                 DAC_data[which_dma][i++] = DAC_X | x;
@@ -158,7 +158,7 @@ inline void vector_sm_execute()
                 x = n;
                 DAC_data[which_dma][i++] = DAC_X | x;
                 if (i == BUFFER_SIZE) {
-                    state = LINE_20;
+                    state = LINE_X_1;
                     return;
                 }
             }
