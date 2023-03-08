@@ -18,13 +18,11 @@
  */
 // TODO: include C:\\Users\\Ethan\\AppData\\Local\\Arduino15\\packages\\rp2040\\hardware\\rp2040\\2.7.1
 
-#include "hardware/divider.h"
 #include "spi_dma.h"
-#include <math.h>
+#include "settings.h"
 
-#define SERIAL_LED 25
-#define FRAME_PIN 8
-#define MAX_PTS 4096
+#include "hardware/divider.h"
+#include <math.h>
 
 uint16_t line_speed = 3;
 uint16_t jump_speed = 150;
@@ -62,8 +60,6 @@ enum vector_sm_state { START,
 // My monitor has a slew rate of about 100us from min to max - 100us / 4096 = 24.41ns per DAC step.
 // The spi frequency is 22.17Mhz / 18 = 1.23Mhz. 1/1.23Mhz = 813ns DAC per step.
 // 813ns / 24.41ns = 33.3 DAC steps are needed to run the monitor at full speed.
-#define STEP 32
-
 inline void vector_sm_execute() __attribute__((always_inline));
 inline void vector_sm_execute()
 {
@@ -190,6 +186,7 @@ void control_complete_isr()
 
 void setup1()
 {
+    init_settings();
     Serial.begin();
     pinMode(SERIAL_LED, OUTPUT);
     point_count[POINT_READ] = 5;
@@ -206,7 +203,7 @@ void loop1()
     static uint32_t cmd = 0;
     static char cmd_count = 0;
     static bool waiting = true;
-
+    update_settings();
     // read from Serial
     // if (!frame_ready) {
     if (Serial.available() > 0) {
