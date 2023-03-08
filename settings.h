@@ -5,7 +5,8 @@
 #define SERIAL_RX 13
 #define SERIAL_TX 12
 
-int STEP = 2;
+int DRAW_SPEED = 2;
+int JUMP_SPEED = 10;
 
 void init_settings()
 {
@@ -26,10 +27,15 @@ void update_settings()
         switch (id) {
         case 0:
             if (val > 0 && val < 4096) {
-                STEP = val;
+                DRAW_SPEED = val;
                 Serial1.println("Speed updated to " + String(val));
             }
             break;
+        case 1:
+            if (val > 0) {
+                JUMP_SPEED = val;
+                Serial1.println("Jump speed updated to " + String(val));
+            }
         }
     }
 }

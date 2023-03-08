@@ -53,7 +53,8 @@ enum vector_sm_state { START,
     LINE_Y_0,
     LINE_Y_1,
     NEXT_POINT,
-    JUMP,
+    JUMP_0,
+    JUMP_1
 };
 
 // An example step calculation:
@@ -73,6 +74,7 @@ inline void vector_sm_execute()
     static int32_t x1, y1;
     static int32_t dx, dy;
     static int32_t tmp, mult, b, n, step; // TODO: will tmp overflow?
+    static int32_t jump_counter;
 
     for (int i = 0; i < BUFFER_SIZE;) {
         switch (state) {
@@ -83,17 +85,23 @@ inline void vector_sm_execute()
             y1 = point_buffer[POINT_READ][point] & 0xfff;
             dx = x1 - x;
             dy = y1 - y;
+            if (brightness == 0) {
+                jump_counter = max(abs(dx), abs(dy)) / JUMP_SPEED + 1;
+                x = x1;
+                y = y1;
+                goto jump_0;
+            }
             if (abs(dx) >= abs(dy)) {
                 tmp = x * dy;
                 b = -dy * x1 / dx + y1;
-                step = dx > 0 ? STEP : -STEP;
+                step = dx > 0 ? DRAW_SPEED : -DRAW_SPEED;
                 x -= step - dx % step;
                 mult = step * dy;
                 goto line_x_0;
             } else {
                 tmp = y * dx;
                 b = -dx * y1 / dy + x1;
-                step = dy > 0 ? STEP : -STEP;
+                step = dy > 0 ? DRAW_SPEED : -DRAW_SPEED;
                 y -= step - dy % step;
                 mult = step * dx;
                 goto line_y_0;
@@ -129,6 +137,7 @@ inline void vector_sm_execute()
                 }
             }
             goto line_x_0;
+
         case LINE_X_1:
         line_y_0:
             tmp += mult;
@@ -159,6 +168,25 @@ inline void vector_sm_execute()
                 }
             }
             goto line_y_0;
+
+        case JUMP_0:
+        jump_0:
+            if (jump_counter-- <= 0) {
+                goto next_point;
+            }
+            DAC_data[which_dma][i++] = DAC_X | x;
+            if (i == BUFFER_SIZE) {
+                state = JUMP_1;
+                return;
+            }
+        case JUMP_1:
+            DAC_data[which_dma][i++] = DAC_Y | y;
+            if (i == BUFFER_SIZE) {
+                state = JUMP_0;
+                return;
+            }
+            goto jump_0;
+
         case NEXT_POINT:
         next_point:
             point++;
