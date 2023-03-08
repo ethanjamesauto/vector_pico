@@ -58,7 +58,11 @@ enum vector_sm_state { START,
     JUMP,
 };
 
-#define STEP 18
+// An example step calculation:
+// My monitor has a slew rate of about 100us from min to max - 100us / 4096 = 24.41ns per DAC step.
+// The spi frequency is 22.17Mhz / 18 = 1.23Mhz. 1/1.23Mhz = 813ns DAC per step.
+// 813ns / 24.41ns = 33.3 DAC steps are needed to run the monitor at full speed.
+#define STEP 32
 
 inline void vector_sm_execute() __attribute__((always_inline));
 inline void vector_sm_execute()
@@ -105,11 +109,11 @@ inline void vector_sm_execute()
             hw_divider_divmod_s32_start(tmp, dx);
             x += step;
             DAC_data[which_dma][i++] = DAC_X | x;
+            n = hw_divider_s32_quotient_wait() + b;
             if (i == BUFFER_SIZE) {
                 state = LINE_11;
                 return;
             }
-            n = hw_divider_s32_quotient_wait() + b;
         case LINE_11:
             if (x == x1) {
                 y = y1;
@@ -135,11 +139,11 @@ inline void vector_sm_execute()
             hw_divider_divmod_s32_start(tmp, dy);
             y += step;
             DAC_data[which_dma][i++] = DAC_Y | y;
+            n = hw_divider_s32_quotient_wait() + b;
             if (i == BUFFER_SIZE) {
                 state = LINE_21;
                 return;
             }
-            n = hw_divider_s32_quotient_wait() + b;
         case LINE_21:
             if (y == y1) {
                 x = x1;
