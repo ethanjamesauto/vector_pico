@@ -49,12 +49,12 @@ void loop()
 
 enum vector_sm_state { START,
     LINE_X_0,
-    LINE_X_1,
     LINE_Y_0,
+    LINE_X_1,
     LINE_Y_1,
     NEXT_POINT,
-    JUMP_0,
-    JUMP_1
+    JUMP_X,
+    JUMP_Y
 };
 
 // An example step calculation:
@@ -89,7 +89,7 @@ inline void vector_sm_execute()
                 jump_counter = max(abs(dx), abs(dy)) / JUMP_SPEED + 1;
                 x = x1;
                 y = y1;
-                goto jump_0;
+                goto jump_x;
             }
             if (abs(dx) >= abs(dy)) {
                 tmp = x * dy;
@@ -115,10 +115,10 @@ inline void vector_sm_execute()
             DAC_data[which_dma][i++] = DAC_X | x;
             n = hw_divider_s32_quotient_wait() + b;
             if (i == BUFFER_SIZE) {
-                state = LINE_Y_0;
+                state = LINE_X_1;
                 return;
             }
-        case LINE_Y_0:
+        case LINE_X_1:
             if (x == x1) {
                 y = y1;
                 DAC_data[which_dma][i++] = DAC_Y | y;
@@ -138,7 +138,7 @@ inline void vector_sm_execute()
             }
             goto line_x_0;
 
-        case LINE_X_1:
+        case LINE_Y_0:
         line_y_0:
             tmp += mult;
             hw_divider_divmod_s32_start(tmp, dy);
@@ -163,29 +163,29 @@ inline void vector_sm_execute()
                 x = n;
                 DAC_data[which_dma][i++] = DAC_X | x;
                 if (i == BUFFER_SIZE) {
-                    state = LINE_X_1;
+                    state = LINE_Y_0;
                     return;
                 }
             }
             goto line_y_0;
 
-        case JUMP_0:
-        jump_0:
+        case JUMP_X:
+        jump_x:
             if (jump_counter-- <= 0) {
                 goto next_point;
             }
             DAC_data[which_dma][i++] = DAC_X | x;
             if (i == BUFFER_SIZE) {
-                state = JUMP_1;
+                state = JUMP_Y;
                 return;
             }
-        case JUMP_1:
+        case JUMP_Y:
             DAC_data[which_dma][i++] = DAC_Y | y;
             if (i == BUFFER_SIZE) {
-                state = JUMP_0;
+                state = JUMP_X;
                 return;
             }
-            goto jump_0;
+            goto jump_x;
 
         case NEXT_POINT:
         next_point:
