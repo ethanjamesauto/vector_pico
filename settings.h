@@ -1,3 +1,5 @@
+#pragma once
+
 #define SERIAL_LED 25
 #define FRAME_PIN 8
 #define MAX_PTS 512
