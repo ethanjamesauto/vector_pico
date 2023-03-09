@@ -69,7 +69,7 @@ inline void vector_sm_execute()
     // James algorithm variables
     static int32_t x1, y1;
     static int32_t dx, dy;
-    static int32_t tmp, mult, b, n, step; // TODO: will tmp overflow?
+    static int32_t b, n, step; // TODO: will tmp overflow?
     static int32_t jump_counter;
 
     for (int i = 0; i < BUFFER_SIZE;) {
@@ -88,25 +88,20 @@ inline void vector_sm_execute()
                 goto jump_x;
             }
             if (abs(dx) >= abs(dy)) {
-                tmp = x * dy;
                 b = -dy * x1 / dx + y1;
                 step = dx > 0 ? DRAW_SPEED : -DRAW_SPEED;
                 x -= step - dx % step;
-                mult = step * dy;
                 goto line_x_0;
             } else {
-                tmp = y * dx;
                 b = -dx * y1 / dy + x1;
                 step = dy > 0 ? DRAW_SPEED : -DRAW_SPEED;
                 y -= step - dy % step;
-                mult = step * dx;
                 goto line_y_0;
             }
             break;
         case LINE_X_0:
         line_x_0:
-            tmp += mult;
-            hw_divider_divmod_s32_start(tmp, dx);
+            hw_divider_divmod_s32_start(x * dy, dx);
             x += step;
             DAC_data[which_dma][i++] = DAC_X | x;
             n = hw_divider_s32_quotient_wait() + b;
@@ -136,8 +131,7 @@ inline void vector_sm_execute()
 
         case LINE_Y_0:
         line_y_0:
-            tmp += mult;
-            hw_divider_divmod_s32_start(tmp, dy);
+            hw_divider_divmod_s32_start(y * dx, dy);
             y += step;
             DAC_data[which_dma][i++] = DAC_Y | y;
             n = hw_divider_s32_quotient_wait() + b;
