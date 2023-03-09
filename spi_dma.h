@@ -4,9 +4,6 @@
 // Size of each buffer
 #define BUFFER_SIZE 4096
 
-// Number of DMA transfers per event
-const uint32_t transfer_count = BUFFER_SIZE;
-
 // Table of values to be sent to DAC
 unsigned short DAC_data[2][BUFFER_SIZE];
 

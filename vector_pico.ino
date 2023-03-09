@@ -57,10 +57,6 @@ enum vector_sm_state { START,
     JUMP_Y
 };
 
-// An example step calculation:
-// My monitor has a slew rate of about 100us from min to max - 100us / 4096 = 24.41ns per DAC step.
-// The spi frequency is 22.17Mhz / 18 = 1.23Mhz. 1/1.23Mhz = 813ns DAC per step.
-// 813ns / 24.41ns = 33.3 DAC steps are needed to run the monitor at full speed.
 inline void vector_sm_execute() __attribute__((always_inline));
 inline void vector_sm_execute()
 {
