@@ -5,7 +5,7 @@
 #define CTRL_CHANNEL 1
 
 // Size of each buffer
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 4096
 
 // Number of DMA transfers per event
 const uint32_t transfer_count = BUFFER_SIZE;
@@ -32,9 +32,9 @@ int buffer_pos = 0;
 
 void control_complete_isr();
 
-void spi_dma_init()
+int spi_dma_init()
 {
-    spi_init(SPI_PORT, 23000000);
+    int baud = spi_init(SPI_PORT, 24000000);
 
     // Format SPI channel (channel, data bits per transfer, polarity, phase,
     // order)
@@ -89,4 +89,5 @@ void spi_dma_init()
 
     // start the control channel
     dma_start_channel_mask(1u << CTRL_CHANNEL);
+    return baud;
 }
