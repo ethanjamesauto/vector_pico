@@ -11,7 +11,7 @@
 #include "settings.h"
 
 char const* json_opts[] = { "\"productName\"", "\"version\"", "\"flipx\"", "\"flipy\"", "\"swapxy\"", "\"bwDisplay\"", "\"vertical\"", "\"crtSpeed\"", "\"crtJumpSpeed\"", "\"remote\"", "\"crtType\"", "\"defaultGame\"" };
-char const* json_vals[] = { "\"VSTCM\"", "\"V3.0\"", "false", "false", "false", "false", "false", "15", "9", "true", "\"CUSTOM\"", "\"none\"" };
+char const* json_vals[] = { "\"VST-PICO\"", "\"V1.0\"", "false", "false", "false", "false", "false", "15", "9", "true", "\"CUSTOM\"", "\"none\"" };
 static char json_str[MAX_JSON_STR_LEN];
 
 // Read data from Raspberry Pi or other external computer
@@ -42,42 +42,48 @@ uint32_t build_json_info_str(char* str)
     return (len + 2); // Length includes both nulls
 }
 
-int read_data(int init)
+advmame_data read_data(int init)
 {
+    advmame_data ret;
+    ret.point = 0;
+    ret.status = 0;
     static uint32_t cmd = 0;
 
     static uint8_t gl_red, gl_green, gl_blue;
     static int frame_offset = 0;
 
     char buf1[5] = "";
-    uint8_t c = -1;
     uint32_t len;
     //  int i;
 
     if (init) {
         frame_offset = 0;
-        return 0;
+        return ret;
     }
-
-    c = Serial.read(); // read one byte at a time
-
-    if (c == -1) // if serial port returns nothing then exit
-        return -1;
+    
+    uint8_t c = Serial.read(); // read one byte at a time
 
     cmd = cmd << 8 | c;
     frame_offset++;
 
     if (frame_offset < 4)
-        return 0;
+        return ret;
 
     frame_offset = 0;
-
     uint8_t header = (cmd >> 29) & 0b00000111;
+    //Serial1.println("Recieved" + String(cmd, HEX) + ", header: " + String(header, BIN));
 
     // common case first
     if (header == FLAG_XY) {
-        uint32_t y = (cmd >> 0) & 0x3fff;
-        uint32_t x = (cmd >> 14) & 0x3fff;
+        //uint32_t y = (cmd >> 0) & 0x3fff;
+        //uint32_t x = (cmd >> 14) & 0x3fff;
+
+        uint32_t y = (cmd >> 0) & 0xfff;
+        uint32_t x = (cmd >> 14) & 0xfff;
+        uint32_t bright = ((cmd >> 28) & 0x01) == 1 ? 0 : 1;
+        ret.point = bright << 24 | (x << 12) | y;
+        ret.status = 2;
+        return ret;
 
         //  Serial.println(x);
         // Serial.println(y);
@@ -122,10 +128,12 @@ int read_data(int init)
         }
         */
 
-        return 1;
+        ret.status = 1;
+        return ret;
     } else if (header == FLAG_EXIT) {
         Serial.flush(); // not sure if this useful, may help in case of manual quit on MAME
-        return -1;
+        ret.status = -1;
+        return ret;
     } else if (header == FLAG_CMD && ((cmd & 0xFF) == FLAG_CMD_GET_DVG_INFO)) { // Some info about the host comes in as follows from the advmame code:
         // sscanf(ADV_VERSION, "%u.%u", &major, &minor);
         // version = ((major & 0xf) << 12) | ((minor & 0xf) << 8) | (DVG_RELEASE << 4) | (DVG_BUILD);
@@ -142,14 +150,14 @@ int read_data(int init)
         Serial.write((cmd >> 24) & 0xFF);
         Serial.write(len & 0xFF);
         Serial.write((len >> 8) & 0xFF);
-        Serial.write((uint8_t) 0); // Only send the first 16 bits since we better not have a strong more than 64K long!
-        Serial.write((uint8_t) 0);
+        Serial.write((uint8_t)0); // Only send the first 16 bits since we better not have a strong more than 64K long!
+        Serial.write((uint8_t)0);
         Serial.write(json_str, len);
 
-        return 0;
+        return ret;
     } else {
         // Serial.println("Unknown");  //This might be messing things up?
     }
 
-    return 0;
+    return ret;
 }

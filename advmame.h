@@ -23,6 +23,11 @@
 #define NUM_JSON_OPTS 12
 #define MAX_JSON_STR_LEN 512
 
-int read_data(int);
+struct advmame_data {
+      int status;
+      uint32_t point;
+};
+
+advmame_data read_data(int);
 
 #endif
