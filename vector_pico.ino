@@ -18,6 +18,7 @@
  */
 // TODO: include C:\\Users\\Ethan\\AppData\\Local\\Arduino15\\packages\\rp2040\\hardware\\rp2040\\2.7.1
 
+#include "advmame.h"
 #include "settings.h"
 #include "spi_dma.h"
 
@@ -210,7 +211,6 @@ void control_complete_isr()
 void setup()
 {
     init_settings();
-    Serial.begin();
     pinMode(SERIAL_LED, OUTPUT);
     point_count[POINT_READ] = 5;
     point_count[POINT_WRITE] = 1;
@@ -219,44 +219,35 @@ void setup()
     point_buffer[POINT_READ][2] = (1 << 24) | (4095 << 12) | 4095;
     point_buffer[POINT_READ][3] = (1 << 24) | (0 << 12) | 4095;
     point_buffer[POINT_READ][4] = (1 << 24) | (0 << 12) | 0;
+    Serial.begin();
+    read_data(1);
 }
 
 void loop()
 {
-    static uint32_t cmd = 0;
-    static char cmd_count = 0;
-    static bool waiting = true;
+    static bool start = true;
     update_settings();
-    //  read from Serial
+
+    // read from Serial
     if (!frame_ready) {
+        if (start) {
+            start = false;
+            point_count[POINT_WRITE] = 0;
+        }
         if (Serial.available() > 0) {
             digitalWriteFast(SERIAL_LED, HIGH);
-            char b = Serial.read();
-            if (waiting && b != 0) { // if we receive a nonzero byte, we're ready to start the next frame
-                waiting = false;
-                // frame_ready = 0;
-                point_count[POINT_WRITE] = 0;
-            }
-            if (!waiting) {
-                cmd = (cmd << 8) | b; // build up a 32-bit command
-                if (++cmd_count == 4) { // see if we have a full command
-                    cmd_count = 0; // reset the command counter
-                    if (cmd == 0x01010101) { // if we receive a "done" command
-                        if (point_count[POINT_WRITE] > 0) {
-                            frame_ready = true;
-                        }
-                        waiting = true; // go back to waiting
-                    } else if (point_count[POINT_WRITE] < MAX_PTS) {
-                        point_buffer[POINT_WRITE][point_count[POINT_WRITE]++] = cmd; // add the point to the buffer, then increment the point count
-                    }
-                    if (cmd == 0) {
-                        // Somehow we reached the gap between one frame and another without recieving a done command.
-                        // This can occur if the pico starts recieving data mid-frame and is unable to sync. If this happens, just go back to waiting for the next frame.
-                        waiting = true;
-                    }
-                }
-            }
+        } else {
             digitalWriteFast(SERIAL_LED, LOW);
+            return;
+        }
+        advmame_data cmd = read_data(0);
+        if (cmd.status == 1) {
+            if (point_count[POINT_WRITE] > 0) {
+                frame_ready = true;
+                start = true;
+            }
+        } else if (cmd.status == 2 && point_count[POINT_WRITE] < MAX_PTS) {
+            point_buffer[POINT_WRITE][point_count[POINT_WRITE]++] = cmd.point; // add the point to the buffer, then increment the point count
         }
     } else {
         // char b = Serial.read();
