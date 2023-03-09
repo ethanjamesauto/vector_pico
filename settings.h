@@ -1,6 +1,6 @@
 #define SERIAL_LED 25
 #define FRAME_PIN 8
-#define MAX_PTS 512
+#define MAX_PTS 4096
 
 #define SERIAL_RX 13
 #define SERIAL_TX 12
