@@ -214,7 +214,7 @@ void control_complete_isr()
     // dir = !dir;
     static int n = 0;
     vector_sm_execute();
-    dma_hw->ints0 = 1u << CTRL_CHANNEL;
+    dma_hw->ints0 = 1u << spi0_ctrl_channel;
 }
 
 void setup()

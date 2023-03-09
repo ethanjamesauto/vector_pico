@@ -1,9 +1,6 @@
 #include "hardware/dma.h"
 #include "hardware/spi.h"
 
-#define DATA_CHANNEL 0
-#define CTRL_CHANNEL 1
-
 // Size of each buffer
 #define BUFFER_SIZE 4096
 
@@ -26,6 +23,8 @@ unsigned short* address_pointer = &DAC_data[0][0];
 #define PIN_MOSI 7
 #define SPI_PORT spi0
 
+int spi0_ctrl_channel, spi0_data_channel; // DMA channel IDs
+
 bool which_dma = 0; // (!which_dma) is read from by the data channel, and (which_dma) is written to by the line drawing algorithm
 static bool done = false; // true if the inactive buffer has been fully prepared and is ready to be sent over SPI
 int buffer_pos = 0;
@@ -46,17 +45,20 @@ int spi_dma_init()
     gpio_set_function(PIN_SCK, GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
 
+    spi0_ctrl_channel = dma_claim_unused_channel(true);
+    spi0_data_channel = dma_claim_unused_channel(true);
+
     // Set up the control channel
-    dma_channel_config c = dma_channel_get_default_config(CTRL_CHANNEL); // default configs
+    dma_channel_config c = dma_channel_get_default_config(spi0_ctrl_channel); // default configs
     channel_config_set_transfer_data_size(&c, DMA_SIZE_32); // 32-bit txfers
     channel_config_set_read_increment(&c, false); // no read incrementing
     channel_config_set_write_increment(&c, false); // no write incrementing
-    channel_config_set_chain_to(&c, DATA_CHANNEL); // chain to data channel
+    channel_config_set_chain_to(&c, spi0_data_channel); // chain to data channel
 
     dma_channel_configure(
-        CTRL_CHANNEL, // Channel to be configured
+        spi0_ctrl_channel, // Channel to be configured
         &c, // The configuration we just created
-        &dma_hw->ch[DATA_CHANNEL]
+        &dma_hw->ch[spi0_data_channel]
              .read_addr, // Write address (data channel read address)
         &address_pointer, // Read address (POINTER TO AN ADDRESS)
         1, // Number of transfers
@@ -64,7 +66,7 @@ int spi_dma_init()
     );
 
     // Set up the data channel
-    dma_channel_config c2 = dma_channel_get_default_config(DATA_CHANNEL); // Default configs
+    dma_channel_config c2 = dma_channel_get_default_config(spi0_data_channel); // Default configs
     channel_config_set_transfer_data_size(&c2, DMA_SIZE_16); // 16-bit txfers
     channel_config_set_read_increment(&c2, true); // yes read incrementing
     channel_config_set_write_increment(&c2, false); // no write incrementing
@@ -72,10 +74,10 @@ int spi_dma_init()
     channel_config_set_dreq(&c2, DREQ_SPI0_TX);
 
     // chain to the controller DMA channel
-    channel_config_set_chain_to(&c2, CTRL_CHANNEL); // Chain to control channel
+    channel_config_set_chain_to(&c2, spi0_ctrl_channel); // Chain to control channel
 
     dma_channel_configure(
-        DATA_CHANNEL, // Channel to be configured
+        spi0_data_channel, // Channel to be configured
         &c2, // The configuration we just created
         &spi_get_hw(SPI_PORT)->dr, // write address (SPI data register)
         DAC_data[0], // The initial read address
@@ -83,11 +85,11 @@ int spi_dma_init()
         false // Don't start immediately.
     );
 
-    dma_channel_set_irq0_enabled(CTRL_CHANNEL, true);
+    dma_channel_set_irq0_enabled(spi0_ctrl_channel, true);
     irq_set_exclusive_handler(DMA_IRQ_0, control_complete_isr);
     irq_set_enabled(DMA_IRQ_0, true);
 
     // start the control channel
-    dma_start_channel_mask(1u << CTRL_CHANNEL);
+    dma_start_channel_mask(1u << spi0_ctrl_channel);
     return baud;
 }
