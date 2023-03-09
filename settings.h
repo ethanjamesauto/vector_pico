@@ -8,7 +8,7 @@
 int baud; // used for finding the SPI baud rate for debugging
 
 int DRAW_SPEED = 5;
-int JUMP_SPEED = 300;
+int JUMP_SPEED = 60;
 
 void init_settings()
 {
