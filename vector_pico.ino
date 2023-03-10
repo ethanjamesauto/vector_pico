@@ -68,15 +68,16 @@ inline void vector_sm_execute()
     static uint8_t brightness;
 
     // James algorithm variables
+    //TODO: consider making some of this stuff non-static and having it recomputed every buffer run, so that memory isn't used as much maybe?
     static int32_t x1, y1;
     static int32_t dx, dy;
-    static int32_t b, n, step; // TODO: will tmp overflow?
+    static int32_t b, n, step;
     static int32_t jump_counter;
 
     for (int i = 0; i < BUFFER_SIZE;) {
         switch (state) {
         case START:
-        start:
+        start: //TODO: waittt, why isn't all this stuff precomputed when a frame is recieved??????????
             brightness = (point_buffer[POINT_READ][point] >> 24) & 0x3f;
             x1 = (point_buffer[POINT_READ][point] >> 12) & 0xfff;
             y1 = point_buffer[POINT_READ][point] & 0xfff;
