@@ -41,7 +41,7 @@ bool frame_ready = false;
 void setup1()
 {
     pinMode(FRAME_PIN, OUTPUT);
-    baud = spi_dma_init();
+    spi_dma_init();
 }
 
 void loop1()
@@ -206,7 +206,7 @@ void control_complete_isr()
     // dir = !dir;
     static int n = 0;
     vector_sm_execute();
-    dma_hw->ints0 = 1u << spi0_ctrl_channel;
+    dma_hw->ints0 = 1u << pio0_sm0_ctrl_channel;
 }
 
 void setup()
