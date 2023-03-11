@@ -58,6 +58,15 @@ enum vector_sm_state { START,
     JUMP_Y
 };
 
+inline void next_i() __attribute__((always_inline));
+inline void next_i(int& i) {
+    if (i & 1) {
+        i -= 1;
+    } else {
+        i += 3;
+    }
+}
+
 inline void vector_sm_execute() __attribute__((always_inline));
 inline void vector_sm_execute()
 {
@@ -74,7 +83,7 @@ inline void vector_sm_execute()
     static int32_t b, n, step;
     static int32_t jump_counter;
 
-    for (int i = 0; i < BUFFER_SIZE;) {
+    for (int i = 1; i < BUFFER_SIZE;) {
         switch (state) {
         case START:
         start: //TODO: waittt, why isn't all this stuff precomputed when a frame is recieved??????????
@@ -105,7 +114,8 @@ inline void vector_sm_execute()
         line_x_0:
             hw_divider_divmod_s32_start(x * dy, dx);
             x += step;
-            DAC_data[which_dma][i++] = DAC_X | x;
+            DAC_data[which_dma][i] = DAC_X | x;
+            next_i(i);
             n = hw_divider_s32_quotient_wait() + b;
             if (i >= BUFFER_SIZE) {
                 state = LINE_X_1;
@@ -114,7 +124,8 @@ inline void vector_sm_execute()
         case LINE_X_1:
             if (x == x1) {
                 y = y1;
-                DAC_data[which_dma][i++] = DAC_Y | y;
+                DAC_data[which_dma][i] = DAC_Y | y;
+                next_i(i);
                 if (i >= BUFFER_SIZE) {
                     state = NEXT_POINT;
                     return;
@@ -123,7 +134,8 @@ inline void vector_sm_execute()
             }
             if (n != y) {
                 y = n;
-                DAC_data[which_dma][i++] = DAC_Y | y;
+                DAC_data[which_dma][i] = DAC_Y | y;
+                next_i(i);
                 if (i >= BUFFER_SIZE) {
                     state = LINE_X_0;
                     return;
@@ -135,7 +147,8 @@ inline void vector_sm_execute()
         line_y_0:
             hw_divider_divmod_s32_start(y * dx, dy);
             y += step;
-            DAC_data[which_dma][i++] = DAC_Y | y;
+            DAC_data[which_dma][i] = DAC_Y | y;
+            next_i(i);
             n = hw_divider_s32_quotient_wait() + b;
             if (i >= BUFFER_SIZE) {
                 state = LINE_Y_1;
@@ -144,7 +157,8 @@ inline void vector_sm_execute()
         case LINE_Y_1:
             if (y == y1) {
                 x = x1;
-                DAC_data[which_dma][i++] = DAC_X | x;
+                DAC_data[which_dma][i] = DAC_X | x;
+                next_i(i);
                 if (i >= BUFFER_SIZE) {
                     state = NEXT_POINT;
                     return;
@@ -153,7 +167,8 @@ inline void vector_sm_execute()
             }
             if (n != x) {
                 x = n;
-                DAC_data[which_dma][i++] = DAC_X | x;
+                DAC_data[which_dma][i] = DAC_X | x;
+                next_i(i);
                 if (i >= BUFFER_SIZE) {
                     state = LINE_Y_0;
                     return;
@@ -166,13 +181,15 @@ inline void vector_sm_execute()
             if (jump_counter-- <= 0) {
                 goto next_point;
             }
-            DAC_data[which_dma][i++] = DAC_X | x;
+            DAC_data[which_dma][i] = DAC_X | x;
+            next_i(i);
             if (i >= BUFFER_SIZE) {
                 state = JUMP_Y;
                 return;
             }
         case JUMP_Y:
-            DAC_data[which_dma][i++] = DAC_Y | y;
+            DAC_data[which_dma][i] = DAC_Y | y;
+            next_i(i);
             if (i >= BUFFER_SIZE) {
                 state = JUMP_X;
                 return;
