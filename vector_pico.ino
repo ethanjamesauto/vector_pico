@@ -107,7 +107,7 @@ inline void vector_sm_execute()
             x += step;
             DAC_data[which_dma][i++] = DAC_X | x;
             n = hw_divider_s32_quotient_wait() + b;
-            if (i == BUFFER_SIZE) {
+            if (i >= BUFFER_SIZE) {
                 state = LINE_X_1;
                 return;
             }
@@ -115,7 +115,7 @@ inline void vector_sm_execute()
             if (x == x1) {
                 y = y1;
                 DAC_data[which_dma][i++] = DAC_Y | y;
-                if (i == BUFFER_SIZE) {
+                if (i >= BUFFER_SIZE) {
                     state = NEXT_POINT;
                     return;
                 }
@@ -124,7 +124,7 @@ inline void vector_sm_execute()
             if (n != y) {
                 y = n;
                 DAC_data[which_dma][i++] = DAC_Y | y;
-                if (i == BUFFER_SIZE) {
+                if (i >= BUFFER_SIZE) {
                     state = LINE_X_0;
                     return;
                 }
@@ -137,7 +137,7 @@ inline void vector_sm_execute()
             y += step;
             DAC_data[which_dma][i++] = DAC_Y | y;
             n = hw_divider_s32_quotient_wait() + b;
-            if (i == BUFFER_SIZE) {
+            if (i >= BUFFER_SIZE) {
                 state = LINE_Y_1;
                 return;
             }
@@ -145,7 +145,7 @@ inline void vector_sm_execute()
             if (y == y1) {
                 x = x1;
                 DAC_data[which_dma][i++] = DAC_X | x;
-                if (i == BUFFER_SIZE) {
+                if (i >= BUFFER_SIZE) {
                     state = NEXT_POINT;
                     return;
                 }
@@ -154,7 +154,7 @@ inline void vector_sm_execute()
             if (n != x) {
                 x = n;
                 DAC_data[which_dma][i++] = DAC_X | x;
-                if (i == BUFFER_SIZE) {
+                if (i >= BUFFER_SIZE) {
                     state = LINE_Y_0;
                     return;
                 }
@@ -167,13 +167,13 @@ inline void vector_sm_execute()
                 goto next_point;
             }
             DAC_data[which_dma][i++] = DAC_X | x;
-            if (i == BUFFER_SIZE) {
+            if (i >= BUFFER_SIZE) {
                 state = JUMP_Y;
                 return;
             }
         case JUMP_Y:
             DAC_data[which_dma][i++] = DAC_Y | y;
-            if (i == BUFFER_SIZE) {
+            if (i >= BUFFER_SIZE) {
                 state = JUMP_X;
                 return;
             }
@@ -196,15 +196,8 @@ inline void vector_sm_execute()
 
 void control_complete_isr()
 {
-    // if (!done)
-    //     Serial.println("Can't keep up, only reached point " + String(buffer_pos));
     which_dma = !which_dma;
-    // buffer_pos = 0;
-    done = false;
     address_pointer = &DAC_data[which_dma][0];
-    static bool dir = 1;
-    // dir = !dir;
-    static int n = 0;
     vector_sm_execute();
     dma_hw->ints0 = 1u << pio0_sm0_ctrl_channel;
 }
