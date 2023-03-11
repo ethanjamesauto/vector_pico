@@ -1,0 +1,42 @@
+; This is a modified version of an official example for full-duplex SPI.
+; It runs at twice the speed of the example and is half-duplex.
+; The slave should sample data on the rising edge of the clock (cpha0)
+
+.program spi_cpha0_cs
+.side_set 2
+
+.wrap_target
+bitloop:
+    out pins, 1        side 0 ; shift out a bit and pulse the clock low
+    jmp x-- bitloop    side 0b10 ; loop and pulse the clock high
+
+    set pins, 0        side 0     
+public entry_point:
+    ;Pull if the OSR is empty (every 2 words for 16-bit) and block if the FIFO is empty 
+    pull ifempty block side 0b01    ; Pulse the CS high and hold it high until data is ready
+    mov x, y           side 0       ; Reload bit counter from Y and pulse the clock low
+.wrap
+
+% c-sdk {
+static inline void pio_spi_cs_init(PIO pio, uint sm, uint prog_offs, uint n_bits, float clkdiv,
+        uint pin_sck, uint pin_mosi) {
+    pio_sm_config c = spi_cpha0_cs_program_get_default_config(prog_offs);
+    sm_config_set_out_pins(&c, pin_mosi, 1);
+    sm_config_set_set_pins(&c, pin_mosi, 1);
+    sm_config_set_sideset_pins(&c, pin_sck);
+    sm_config_set_out_shift(&c, false, true, 32);
+    sm_config_set_clkdiv(&c, clkdiv);
+
+    pio_sm_set_pins_with_mask(pio, sm, (2u << pin_sck), (3u << pin_sck) | (1u << pin_mosi));
+    pio_sm_set_pindirs_with_mask(pio, sm, (3u << pin_sck) | (1u << pin_mosi), (3u << pin_sck) | (1u << pin_mosi));
+    pio_gpio_init(pio, pin_mosi);
+    pio_gpio_init(pio, pin_sck);
+    pio_gpio_init(pio, pin_sck + 1);
+
+    uint entry_point = prog_offs + spi_cpha0_cs_offset_entry_point;
+    pio_sm_init(pio, sm, entry_point, &c);
+    pio_sm_exec(pio, sm, pio_encode_set(pio_x, n_bits - 1));
+    pio_sm_exec(pio, sm, pio_encode_set(pio_y, n_bits - 1));
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

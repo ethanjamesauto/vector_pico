@@ -1,10 +1,10 @@
 #pragma once
 
 #include "hardware/dma.h"
-#include "spi_pio.h"
+#include "spi_half_duplex.h"
 
 // Size of each buffer
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 128
 
 // Table of values to be sent to DAC
 unsigned short DAC_data[2][BUFFER_SIZE];
@@ -41,7 +41,7 @@ void spi_dma_init()
 
     int sm = 0;
     uint offset = pio_add_program(pio0, &spi_cpha0_cs_program);
-    pio_spi_cs_init(pio0, sm, offset, 16, 133e6 / (10e6 * 2), false, PIN_SCK, PIN_MOSI);
+    pio_spi_cs_init(pio0, sm, offset, 16, 133e6 / (20e6 * 2), PIN_SCK, PIN_MOSI);
 
     pio0_sm0_ctrl_channel = dma_claim_unused_channel(true);
     pio0_sm0_data_channel = dma_claim_unused_channel(true);
@@ -78,7 +78,7 @@ void spi_dma_init()
         &c2, // The configuration we just created
         &pio0->txf[sm], // write address (PIO TX FIFO)
         DAC_data[0], // The initial read address
-        BUFFER_SIZE, // Number of transfers
+        BUFFER_SIZE / 2, // Number of transfers
         false // Don't start immediately.
     );
 
