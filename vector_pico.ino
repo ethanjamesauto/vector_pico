@@ -101,7 +101,7 @@ inline void vector_sm_execute()
             if (abs(dx) >= abs(dy)) {
                 b = -dy * x1 / dx + y1;
                 step = dx > 0 ? DRAW_SPEED : -DRAW_SPEED;
-                x -= step - dx % step;
+                x -= step - dx % step; //TODO: handle when this is negative
                 goto line_x_0;
             } else {
                 b = -dx * y1 / dy + x1;
