@@ -25,7 +25,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(vector-pico vector-pico.c drawing.c asteroids_font.c hershey_font.c)
+add_executable(vector-pico vector-pico.c drawing.c asteroids_font.c hershey_font.c advmame.cpp)
 
 pico_generate_pio_header(vector-pico ${CMAKE_CURRENT_LIST_DIR}/spi_half_duplex.pio)
 
