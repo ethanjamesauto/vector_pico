@@ -39,6 +39,7 @@ pico_enable_stdio_usb(vector-pico 1)
 target_link_libraries(vector-pico
         pico_stdlib
         pico_multicore
+        pico_time
 )
 
 # Add the standard include files to the build

@@ -4,6 +4,7 @@
 
 #include "advmame.h"
 #include "drawing.h"
+#include "test_pattern.h"
 
 void draw_loop()
 {
@@ -21,6 +22,7 @@ int main()
 
     init();
     begin_frame();
+    /*
     draw_moveto(-neg, -neg);
     draw_to_xyrgb(pos, -neg, 255, 255, 255);
     draw_to_xyrgb(pos, pos, 255, 255, 255);
@@ -28,12 +30,15 @@ int main()
     draw_to_xyrgb(-neg, -neg, 255, 255, 255);
     draw_string("Hello, world!", -1800, 200, 20, 255);
     draw_string("0123456789+=-", -1800, -200, 20, 255);
+    */
+    draw_test_pattern();
+    // show_vstcm_splash_screen();
+    multicore_launch_core1(draw_loop);
     end_frame();
 
     read_data(true);
-    multicore_launch_core1(draw_loop);
     while (1) {
-        read_data(false);
+        int result = read_data(false);
     }
     return 0;
 }
