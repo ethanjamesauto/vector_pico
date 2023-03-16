@@ -1,13 +1,16 @@
-#include "build/spi_half_duplex.pio.h"
-#include "hardware/pio.h"
+#include "pico/multicore.h"
 #include "pico/stdlib.h"
-
-#include "drawing.h"
-#include "max5716.h"
+#include <stdio.h>
 
 #include "advmame.h"
+#include "drawing.h"
 
-#include <stdio.h>
+void draw_loop()
+{
+    while (1) {
+        draw_frame();
+    }
+}
 
 int main()
 {
@@ -43,10 +46,11 @@ int main()
     draw_string("0123456789+=-", -1800, -200, 20, 255);
     end_frame();
     read_data(true);
+
+    multicore_launch_core1(draw_loop);
+
     while (1) {
-        for (int i = 0; i < 100; i++)
-            read_data(false);
-        draw_frame();
+        read_data(false);
     }
     return 0;
 }
