@@ -51,8 +51,8 @@ void init()
     for (int i = 5; i <= 10; i++)
         gpio_set_function(i, GPIO_FUNC_PIO0);
     uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
-    pio_spi_cs_init(PIO, SM_X, offset, 24, 133e6 / (30e6 * 2), 5, 7);
-    pio_spi_cs_init(PIO, SM_Y, offset, 24, 133e6 / (30e6 * 2), 8, 10);
+    pio_spi_cs_init(PIO, SM_X, offset, 24, 133e6 / (44.3333333333e6 * 2), 5, 7);
+    pio_spi_cs_init(PIO, SM_Y, offset, 24, 133e6 / (44.3333333333e6 * 2), 8, 10);
 }
 
 void begin_frame()
@@ -213,6 +213,16 @@ static inline void __always_inline(jump)(int16_t x, int16_t y)
     }
 }
 
+static inline void __always_inline(update_rgb)(uint8_t r, uint8_t g, uint8_t b)
+{
+    if (r != rpos || g != gpos || b != bpos) {
+        rpos = r;
+        gpos = g;
+        bpos = b;
+    }
+}
+
+
 void __not_in_flash_func(draw_frame)()
 {
     for (int i = 0; i < frame_count[POINT_READ]; i++) {
@@ -222,10 +232,11 @@ void __not_in_flash_func(draw_frame)()
         uint16_t r = p.r;
         uint16_t g = p.g;
         uint16_t b = p.b;
-        if (r == 0 && g == 0 && b == 0)
-            jump(x, y);
-        else
-            draw_line(x, y, X_POSITIVE);
+        // if (r == 0 && g == 0 && b == 0)
+        //     jump(x, y);
+        // else
+        update_rgb(r, g, b);
+        draw_line(x, y, X_POSITIVE);
     }
     if (frame_ready) {
         which_frame = !which_frame;
