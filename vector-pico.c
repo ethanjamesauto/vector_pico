@@ -12,7 +12,7 @@ int main()
     stdio_init_all();
     //  while (2)
     //    puts("Hello, world!");//*/
-
+    /*
     int sm = 0;
     uint offset = pio_add_program(pio0, &spi_cpha0_cs_program);
     pio_spi_cs_init(pio0, sm, offset, 24, 133e6 / (50e6 * 2), 5, 7);
@@ -25,7 +25,12 @@ int main()
         i += 2048;
         pio_sm_put_blocking(pio0, sm, val);
         for (volatile int i = 0; i < 1000; i++);
-    }
+    }*/
 
+    init();
+    while(1) {
+        draw_frame();
+    }
     return 0;
 }
+ 

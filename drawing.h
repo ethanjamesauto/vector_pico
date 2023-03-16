@@ -21,6 +21,8 @@ typedef struct ColourIntensity { // Stores current levels of brightness for each
     uint8_t blue;
 } ColourIntensity_t;
 
+void init();
+void draw_frame();
 void begin_frame();
 void end_frame();
 
