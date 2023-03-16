@@ -1,9 +1,11 @@
+#include "build/spi_half_duplex.pio.h"
 #include "hardware/pio.h"
 #include "pico/stdlib.h"
-#include "build/spi_half_duplex.pio.h"
 
 #include "drawing.h"
 #include "max5716.h"
+
+#include "advmame.h"
 
 #include <stdio.h>
 
@@ -40,8 +42,10 @@ int main()
     draw_string("Hello, world!", -1800, 200, 20, 255);
     draw_string("0123456789+=-", -1800, -200, 20, 255);
     end_frame();
-
-    while(1) {
+    read_data(true);
+    while (1) {
+        for (int i = 0; i < 100; i++)
+            read_data(false);
         draw_frame();
     }
     return 0;
