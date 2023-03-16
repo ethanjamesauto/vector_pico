@@ -52,3 +52,8 @@ target_link_libraries(vector-pico
 
 pico_add_extra_outputs(vector-pico)
 
+add_custom_command(TARGET vector-pico POST_BUILD
+    COMMAND powershell ${CMAKE_CURRENT_SOURCE_DIR}/picoFlashTool_WinPS.ps1
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Flashing Pico..."
+)
