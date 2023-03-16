@@ -31,7 +31,7 @@ void draw_to_xyrgb(int, int, uint8_t, uint8_t, uint8_t);
 void draw_string(const char*, int, int, int, int);
 int draw_character(char, int, int, int, int);
 void draw_moveto(int, int);
-void _draw_lineto(const int, const int, float);
+void _draw_lineto(const int, const int);
 void old_draw_lineto(int, int, const int);
 void make_gammatable(float, uint16_t, uint16_t, uint16_t*);
 void init_gamma();

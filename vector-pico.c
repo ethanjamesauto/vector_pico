@@ -28,9 +28,21 @@ int main()
     }*/
 
     init();
+    begin_frame();
+
+    const int pos = 2047;
+    const int neg = 2048;
+    draw_moveto(-neg, -neg);
+    draw_to_xyrgb(pos, -neg, 255, 255, 255);
+    draw_to_xyrgb(pos, pos, 255, 255, 255);
+    draw_to_xyrgb(-neg, pos, 255, 255, 255);
+    draw_to_xyrgb(-neg, -neg, 255, 255, 255);
+    draw_string("Hello, world!", -1800, 200, 20, 255);
+    draw_string("0123456789+=-", -1800, -200, 20, 255);
+    end_frame();
+
     while(1) {
         draw_frame();
     }
     return 0;
 }
- 
