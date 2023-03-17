@@ -43,7 +43,7 @@ void old_draw_lineto(int, int, const int);
 void make_gammatable(float, uint16_t, uint16_t, uint16_t*);
 void init_gamma();
 void brightness(uint8_t, uint8_t, uint8_t);
-void goto_xy(uint16_t, uint16_t);
+//void goto_xy(uint16_t, uint16_t); only in source file
 void dwell(int);
 void MCP4922_write1(int, uint16_t);
 void MCP4922_write2(int, uint16_t, uint16_t, int);

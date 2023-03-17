@@ -118,7 +118,7 @@ void _draw_lineto(int x1, int y1)
 /**
  * Everything below this line should run as fast as possible and on a separate core
  */
-static inline void __always_inline(write_xy)(int16_t x, int16_t y)
+static inline void __always_inline(goto_xy)(int16_t x, int16_t y)
 {
     int xtemp = x >> 1;
     int ytemp = y >> 1;
@@ -140,7 +140,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
             if (x >= x1)
                 goto end;
             y = x * dy / dx + b;
-            write_xy(x, y);
+            goto_xy(x, y);
         }
     case X_NEGATIVE:
         while (1) {
@@ -148,7 +148,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
             if (x <= x1)
                 goto end;
             y = x * dy / dx + b;
-            write_xy(x, y);
+            goto_xy(x, y);
         }
     case Y_POSITIVE:
         while (1) {
@@ -156,7 +156,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
             if (y >= y1)
                 goto end;
             x = y * dx / dy + b;
-            write_xy(x, y);
+            goto_xy(x, y);
         }
     case Y_NEGATIVE:
         while (1) {
@@ -164,11 +164,11 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
             if (y <= y1)
                 goto end;
             x = y * dx / dy + b;
-            write_xy(x, y);
+            goto_xy(x, y);
         }
     }
 end:
-    write_xy(x1, y1);
+    goto_xy(x1, y1);
     xpos = x1;
     ypos = y1;
     return;
