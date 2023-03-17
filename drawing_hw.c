@@ -9,8 +9,6 @@
 
 #define PINCUSHION_FACTOR 23 // higher number -> less correction
 
-// #define CONFIG_FONT_HERSHEY
-
 #define PIO pio0
 #define SM_X 0
 #define SM_Y 1
@@ -38,11 +36,14 @@ bool which_frame = 0; // which framebuffer is read from
 
 bool frame_ready = 0;
 
-int xpos = 0, ypos = 0; // current position
+int16_t xpos = 0, ypos = 0; // current position
 int rpos = 0, gpos = 0, bpos = 0; // current color
 
 void init()
 {
+    frame_count[POINT_WRITE] = 0;
+    frame_count[POINT_READ] = 0;
+
     // set up SPI state machines
     for (int i = 5; i <= 10; i++)
         gpio_set_function(i, GPIO_FUNC_PIO0);
@@ -83,6 +84,8 @@ void _draw_lineto(int x1, int y1)
 
     x1 = clamp(x1, -2048, 2047);
     y1 = clamp(y1, -2048, 2047);
+    x1 = map(x1, -2048, 2047, -2010, 2047); //TODO: the dacs have some problems with lower values for some reason
+    y1 = map(y1, -2048, 2047, -2010, 2047);
 
     point_t* p = &frame[POINT_WRITE][frame_count[POINT_WRITE]];
 
@@ -115,7 +118,7 @@ void _draw_lineto(int x1, int y1)
 /**
  * Everything below this line should run as fast as possible and on a separate core
  */
-static inline void __always_inline(write_xy)(int x, int y)
+static inline void __always_inline(write_xy)(int16_t x, int16_t y)
 {
     int xtemp = x >> 1;
     int ytemp = y >> 1;
@@ -128,7 +131,7 @@ static inline void __always_inline(write_xy)(int x, int y)
 static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx, int16_t dy, line_mode mode, int b)
 {
     int x = xpos, y = ypos;
-#define step 20
+#define step 2
 
     switch (mode) {
     case X_POSITIVE:
@@ -195,7 +198,7 @@ static inline void __always_inline(update_rgb)(uint8_t r, uint8_t g, uint8_t b)
     }
 }
 
-void __not_in_flash_func(draw_frame)()
+void draw_frame()
 {
     for (int i = 0; i < frame_count[POINT_READ]; i++) {
         point_t p = frame[POINT_READ][i];

@@ -2,6 +2,8 @@
 #include "hershey_font.h"
 #include "asteroids_font.h"
 
+#define CONFIG_FONT_HERSHEY
+
 void draw_string(const char* s, int x, int y, int size, int brightness)
 {
     while (*s) {
