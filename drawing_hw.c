@@ -90,6 +90,17 @@ void _draw_lineto(int x1, int y1)
 
     x1 = clamp(x1, -2048, 2047);
     y1 = clamp(y1, -2048, 2047);
+
+    if (FLIP_X)
+        x1 = ~x1; // bitwise NOT turns -2048 into 2047, etc.
+    if (FLIP_Y)
+        y1 = ~y1;
+    if (SWAP_XY) {
+        int temp = x1;
+        x1 = y1;
+        y1 = temp;
+    }
+
     x1 = map(x1, -2048, 2047, -2010, 2047); // TODO: the dacs have some problems with lower values for some reason
     y1 = map(y1, -2048, 2047, -2010, 2047);
 

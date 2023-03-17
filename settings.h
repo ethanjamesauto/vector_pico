@@ -6,7 +6,6 @@
    Code to read and write settings to SD card
 
 */
-
 #ifndef _settings_h_
 #define _settings_h_
 
@@ -15,7 +14,7 @@
 //#define IR_REMOTE // define if IR remote is fitted  TODO:deactivate if the menu is not shown? Has about a 10% reduction of frame rate when active
 
 //
-// Definitions related to s ettings with default values
+// Definitions related to settings with default values
 //
 const int OFF_SHIFT = 30; // Smaller numbers == slower transits (the higher the number, the less flicker and faster draw but more wavy lines)
 const int OFF_DWELL0 = 0; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
@@ -23,8 +22,8 @@ const int OFF_DWELL1 = 0; // Time to sit before starting a transit
 const int OFF_DWELL2 = 0; // Time to sit after finishing a transit
 const int NORMAL_SHIFT = 3; // The higher the number, the less flicker and faster draw but more wavy lines
 const bool SHOW_DT = true;
-const bool FLIP_X = false; // Sometimes the X and Y need to be flipped and/or swapped
-const bool FLIP_Y = false;
+const bool FLIP_X = true; // Sometimes the X and Y need to be flipped and/or swapped
+const bool FLIP_Y = true;
 const bool SWAP_XY = false;
 const bool PINCUSHION = false;
 const int NORMAL1 = 150; // Brightness of text in parameter list
