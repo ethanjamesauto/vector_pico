@@ -17,12 +17,12 @@ int main()
 {
     stdio_init_all();
 
-    const int pos = 2047;
-    const int neg = 2048;
+    const int pos = 2000;
+    const int neg = 2000;
 
     init();
     begin_frame();
-    /*
+    //*
     draw_moveto(-neg, -neg);
     draw_to_xyrgb(pos, -neg, 255, 255, 255);
     draw_to_xyrgb(pos, pos, 255, 255, 255);
@@ -30,8 +30,9 @@ int main()
     draw_to_xyrgb(-neg, -neg, 255, 255, 255);
     draw_string("Hello, world!", -1800, 200, 20, 255);
     draw_string("0123456789+=-", -1800, -200, 20, 255);
-    */
-    draw_test_pattern();
+    draw_moveto(-neg, -neg);
+    //*/
+    //draw_test_pattern();
     // show_vstcm_splash_screen();
     multicore_launch_core1(draw_loop);
     end_frame();
