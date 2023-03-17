@@ -1,9 +1,10 @@
 #include "build/spi_half_duplex.pio.h"
 #include "drawing.h"
 #include "max5716.h"
+#include "pico/time.h"
+#include "settings.h"
 #include "util.h"
 #include <stdlib.h>
-#include "pico/time.h"
 
 #define MAX_PTS 4096
 
@@ -23,7 +24,7 @@ typedef struct {
     uint8_t blue;
     line_mode mode; // which line drawing algorithm to use
     int b; // y-intercept value
-    int8_t step; // drawing speed
+    uint8_t shift; // drawing speed
 } point_t;
 
 point_t frame[2][MAX_PTS]; // two framebuffers - one for writing to, and one for reading from
@@ -60,7 +61,7 @@ void begin_frame()
 void end_frame()
 {
     frame_ready = 1;
-    
+
     // A new frame cannot be buffered untl the one ready to be drawn (not the one actively being drawn) is drawn.
     // Right now, this method blocks until the frame is drawn using the while loop. There's a delay to stop the
     // loop from hogging the CPU and RAM.
@@ -72,6 +73,11 @@ void end_frame()
 
 void brightness(uint8_t r, uint8_t g, uint8_t b)
 {
+    if (r == 0 && g == 0 && b == 0)
+        frame[POINT_WRITE][frame_count[POINT_WRITE]].shift = OFF_SHIFT;
+    else
+        frame[POINT_WRITE][frame_count[POINT_WRITE]].shift = NORMAL_SHIFT;
+
     frame[POINT_WRITE][frame_count[POINT_WRITE]].red = r;
     frame[POINT_WRITE][frame_count[POINT_WRITE]].green = g;
     frame[POINT_WRITE][frame_count[POINT_WRITE]].blue = b;
@@ -84,7 +90,7 @@ void _draw_lineto(int x1, int y1)
 
     x1 = clamp(x1, -2048, 2047);
     y1 = clamp(y1, -2048, 2047);
-    x1 = map(x1, -2048, 2047, -2010, 2047); //TODO: the dacs have some problems with lower values for some reason
+    x1 = map(x1, -2048, 2047, -2010, 2047); // TODO: the dacs have some problems with lower values for some reason
     y1 = map(y1, -2048, 2047, -2010, 2047);
 
     point_t* p = &frame[POINT_WRITE][frame_count[POINT_WRITE]];
@@ -128,15 +134,23 @@ static inline void __always_inline(goto_xy)(int16_t x, int16_t y)
     pio_sm_put_blocking(PIO, SM_Y, max5716_data_word((ycorr + 2048) << 4));
 }
 
-static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx, int16_t dy, line_mode mode, int b)
+static inline void __always_inline(dwell)(int count)
+{
+    // can work better or faster without this on some monitors
+    for (int i = 0; i < count; i++) { // The original VSTCM used delayNanoseconds(500);
+        // sleep_us(1);
+        goto_xy(xpos, ypos); // writing to the DACs seems to have a more stable output than sleeping
+    }
+}
+
+static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx, int16_t dy, line_mode mode, int b, uint8_t shift)
 {
     int x = xpos, y = ypos;
-#define step 2
 
     switch (mode) {
     case X_POSITIVE:
         while (1) {
-            x += step;
+            x += shift;
             if (x >= x1)
                 goto end;
             y = x * dy / dx + b;
@@ -144,7 +158,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
         }
     case X_NEGATIVE:
         while (1) {
-            x -= step;
+            x -= shift;
             if (x <= x1)
                 goto end;
             y = x * dy / dx + b;
@@ -152,7 +166,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
         }
     case Y_POSITIVE:
         while (1) {
-            y += step;
+            y += shift;
             if (y >= y1)
                 goto end;
             x = y * dx / dy + b;
@@ -160,7 +174,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
         }
     case Y_NEGATIVE:
         while (1) {
-            y -= step;
+            y -= shift;
             if (y <= y1)
                 goto end;
             x = y * dx / dy + b;
@@ -195,6 +209,7 @@ static inline void __always_inline(update_rgb)(uint8_t r, uint8_t g, uint8_t b)
         rpos = r;
         gpos = g;
         bpos = b;
+        dwell(OFF_DWELL0);
     }
 }
 
@@ -202,11 +217,14 @@ void draw_frame()
 {
     for (int i = 0; i < frame_count[POINT_READ]; i++) {
         point_t p = frame[POINT_READ][i];
-        //if (p.red == 0 && p.green == 0 && p.blue == 0)
-        //    jump(p.x, p.y);
-        //else {
-            update_rgb(p.red, p.green, p.blue);
-            draw_line(p.x, p.y, p.dx, p.dy, p.mode, p.b);
+        // if (p.red == 0 && p.green == 0 && p.blue == 0)
+        //     jump(p.x, p.y);
+        // else {
+        update_rgb(p.red, p.green, p.blue);
+
+        dwell(OFF_DWELL1);
+        draw_line(p.x, p.y, p.dx, p.dy, p.mode, p.b, p.shift);
+        dwell(OFF_DWELL2);
         //}
     }
     if (frame_ready) {

@@ -12,27 +12,13 @@
 
 #include <stdio.h>
 
-#define IR_REMOTE // define if IR remote is fitted  TODO:deactivate if the menu is not shown? Has about a 10% reduction of frame rate when active
-
-//
-// Test pattern definitions
-//
-typedef struct DataChunk {
-    uint16_t x; // We'll just use 12 bits of X & Y for a 4096 point resolution
-    uint16_t y;
-    uint8_t red; // Max value of each colour is 255
-    uint8_t green;
-    uint8_t blue;
-} DataChunk_t;
-
-#define NUMBER_OF_TEST_PATTERNS 2
-const int MAX_PTS = 3000;
+//#define IR_REMOTE // define if IR remote is fitted  TODO:deactivate if the menu is not shown? Has about a 10% reduction of frame rate when active
 
 //
 // Definitions related to s ettings with default values
 //
-const int OFF_SHIFT = 8; // Smaller numbers == slower transits (the higher the number, the less flicker and faster draw but more wavy lines)
-const int OFF_DWELL0 = 6; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
+const int OFF_SHIFT = 30; // Smaller numbers == slower transits (the higher the number, the less flicker and faster draw but more wavy lines)
+const int OFF_DWELL0 = 0; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
 const int OFF_DWELL1 = 0; // Time to sit before starting a transit
 const int OFF_DWELL2 = 0; // Time to sit after finishing a transit
 const int NORMAL_SHIFT = 3; // The higher the number, the less flicker and faster draw but more wavy lines
