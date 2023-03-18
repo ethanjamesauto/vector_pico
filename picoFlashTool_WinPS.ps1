@@ -3,7 +3,7 @@ $ErrorActionpreference = "silentlycontinue"
 
 <# reset pico over baud rate change to 1200 baud #>
 echo "resetting pico"
-mode COM16 baud=12 parity=n data=8 stop=1
+mode COM8 baud=12 parity=n data=8 stop=1
 
 <# check if pico has mounted as USB-device #>
 $i = 0

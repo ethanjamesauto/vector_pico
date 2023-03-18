@@ -17,9 +17,9 @@
 // Definitions related to settings with default values
 //
 const int OFF_SHIFT = 30; // Smaller numbers == slower transits (the higher the number, the less flicker and faster draw but more wavy lines)
-const int OFF_DWELL0 = 0; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
+const int OFF_DWELL0 = 5; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
 const int OFF_DWELL1 = 0; // Time to sit before starting a transit
-const int OFF_DWELL2 = 0; // Time to sit after finishing a transit
+const int OFF_DWELL2 = 5; // Time to sit after finishing a transit
 const int NORMAL_SHIFT = 3; // The higher the number, the less flicker and faster draw but more wavy lines
 const bool SHOW_DT = true;
 const bool FLIP_X = true; // Sometimes the X and Y need to be flipped and/or swapped

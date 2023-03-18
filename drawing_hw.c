@@ -1,5 +1,6 @@
 #include "build/spi_half_duplex.pio.h"
 #include "drawing.h"
+#include "hardware/gpio.h"
 #include "max5716.h"
 #include "pico/time.h"
 #include "settings.h"
@@ -10,6 +11,8 @@
 
 #define PINCUSHION_FACTOR 23 // higher number -> less correction
 
+#define BLANK_PIN 4
+
 #define PIO pio0
 #define SM_X 0
 #define SM_Y 1
@@ -19,6 +22,7 @@ typedef struct {
     int16_t y; // y destination
     int16_t dx;
     int16_t dy;
+    bool blank;
     uint8_t red;
     uint8_t green;
     uint8_t blue;
@@ -44,6 +48,11 @@ void init()
 {
     frame_count[POINT_WRITE] = 0;
     frame_count[POINT_READ] = 0;
+
+    gpio_set_function(BLANK_PIN, GPIO_FUNC_SIO);
+    gpio_init(BLANK_PIN);
+    gpio_set_dir(BLANK_PIN, GPIO_OUT);
+    gpio_put(BLANK_PIN, 0);
 
     // set up SPI state machines
     for (int i = 5; i <= 10; i++)
@@ -73,10 +82,13 @@ void end_frame()
 
 void brightness(uint8_t r, uint8_t g, uint8_t b)
 {
-    if (r == 0 && g == 0 && b == 0)
+    if (r == 0 && g == 0 && b == 0) {
         frame[POINT_WRITE][frame_count[POINT_WRITE]].shift = OFF_SHIFT;
-    else
+        frame[POINT_WRITE][frame_count[POINT_WRITE]].blank = true;
+    } else {
         frame[POINT_WRITE][frame_count[POINT_WRITE]].shift = NORMAL_SHIFT;
+        frame[POINT_WRITE][frame_count[POINT_WRITE]].blank = false;
+    }
 
     frame[POINT_WRITE][frame_count[POINT_WRITE]].red = r;
     frame[POINT_WRITE][frame_count[POINT_WRITE]].green = g;
@@ -220,8 +232,23 @@ static inline void __always_inline(update_rgb)(uint8_t r, uint8_t g, uint8_t b)
         rpos = r;
         gpos = g;
         bpos = b;
-        //dwell(OFF_DWELL0); TODO: maybe turn this on
+        // dwell(OFF_DWELL0); TODO: maybe turn this on
     }
+}
+
+static inline bool __always_inline(blank)(bool blank)
+{
+    static int beam_on = 0;
+    if (blank && beam_on) {
+        gpio_put(BLANK_PIN, 0);
+        beam_on = 0;
+        return 1;
+    } else if (!blank && !beam_on) {
+        gpio_put(BLANK_PIN, 1);
+        beam_on = 1;
+        return 1;
+    }
+    return 0;
 }
 
 void draw_frame()
@@ -231,9 +258,12 @@ void draw_frame()
         // if (p.red == 0 && p.green == 0 && p.blue == 0)
         //     jump(p.x, p.y);
         // else {
-        update_rgb(p.red, p.green, p.blue);
-
-        dwell(OFF_DWELL1);
+        // update_rgb(p.red, p.green, p.blue);
+        bool updated = blank(p.blank);
+        if (updated)
+            dwell(OFF_DWELL0);
+        else
+            dwell(OFF_DWELL1);
         draw_line(p.x, p.y, p.dx, p.dy, p.mode, p.b, p.shift);
         dwell(OFF_DWELL2);
         //}
