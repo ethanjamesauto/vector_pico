@@ -1,6 +1,7 @@
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
+#include "uart_settings.h"
 #include <stdio.h>
 
 #include "advmame.h"
@@ -21,6 +22,7 @@ int main()
     const int pos = 2047;
     const int neg = 2048;
 
+    settings_init();
     init();
     begin_frame();
     //*

@@ -58,8 +58,8 @@ void init()
     for (int i = 5; i <= 10; i++)
         gpio_set_function(i, GPIO_FUNC_PIO0);
     uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
-    pio_spi_cs_init(PIO, SM_X, offset, 24, 133e6 / (20e6 * 2), 5, 7);
-    pio_spi_cs_init(PIO, SM_Y, offset, 24, 133e6 / (20e6 * 2), 8, 10);
+    pio_spi_cs_init(PIO, SM_X, offset, 24, 133e6 / (30e6 * 2), 5, 7);
+    pio_spi_cs_init(PIO, SM_Y, offset, 24, 133e6 / (30e6 * 2), 8, 10);
 }
 
 void begin_frame()
