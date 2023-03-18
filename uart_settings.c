@@ -7,6 +7,7 @@
 #include "hardware/irq.h"
 #include "hardware/uart.h"
 #include "pico/stdlib.h"
+#include "settings.h"
 #include <stdio.h>
 
 /// \tag::uart_advanced[]
@@ -45,11 +46,14 @@ void on_uart_rx()
             if (ch == '\n') {
                 buf[count] = '\0';
                 if (uart_is_writable(UART_ID)) {
-                    uart_puts(UART_ID, buf);
+                    int setting, value;
+                    // scan two ints into a and b
+                    sscanf(buf, "%d %d", &setting, &value);
+                    uart_puts(UART_ID, "Updated setting ");
+                    uart_putc(UART_ID, (char) setting + '0');
                     uart_putc(UART_ID, '\n');
-                    int a, b;
-                    //scan two ints into a and b
-                    sscanf(buf, "%d %d", &a, &b);
+
+                    update_setting(setting, value);
                 }
 
                 state = WAITING;
