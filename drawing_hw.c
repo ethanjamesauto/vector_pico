@@ -26,7 +26,7 @@ typedef struct {
     uint8_t blue;
     line_mode mode; // which line drawing algorithm to use
     int b; // y-intercept value
-    uint8_t shift; // drawing speed
+    uint16_t shift; // drawing speed
 } point_t;
 
 point_t frame[2][MAX_PTS]; // two framebuffers - one for writing to, and one for reading from
@@ -172,7 +172,7 @@ static inline void __always_inline(dwell)(int count)
     }
 }
 
-static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx, int16_t dy, line_mode mode, int b, uint8_t shift)
+static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx, int16_t dy, line_mode mode, int b, uint16_t shift)
 {
     int x = xpos, y = ypos;
 
