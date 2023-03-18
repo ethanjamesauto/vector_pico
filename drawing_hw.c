@@ -220,7 +220,7 @@ static inline void __always_inline(update_rgb)(uint8_t r, uint8_t g, uint8_t b)
         rpos = r;
         gpos = g;
         bpos = b;
-        dwell(OFF_DWELL0);
+        //dwell(OFF_DWELL0); TODO: maybe turn this on
     }
 }
 

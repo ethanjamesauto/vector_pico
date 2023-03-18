@@ -51,6 +51,7 @@ target_include_directories(vector-pico PRIVATE
 # Add any user requested libraries
 target_link_libraries(vector-pico
         hardware_pio
+        hardware_gpio
         )
 
 pico_add_extra_outputs(vector-pico)

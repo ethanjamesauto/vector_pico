@@ -52,7 +52,7 @@ void write_vstcm_config();
 void show_vstcm_settings_screen();
 void show_vstcm_splash_screen();
 void make_test_pattern();
-void moveto(int, int, int, int, int, int);
-void draw_test_pattern(int);
+//void moveto(int, int, int, int, int, int);
+//void draw_test_pattern(int); 
 
 #endif

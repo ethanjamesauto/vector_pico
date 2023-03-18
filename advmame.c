@@ -10,6 +10,7 @@
 // #include <SD.h>
 #include "advmame.h"
 #include "drawing.h"
+#include "hardware/gpio.h"
 #include "string.h"
 #include <stdio.h>
 // #include "settings.h"
@@ -62,9 +63,10 @@ int read_data(int init)
     static int frame_offset = 0;
 
     char buf1[5] = "";
-    uint32_t len;
+    static uint32_t len;
 
     if (init) {
+        len = build_json_info_str(json_str);
         frame_offset = 0;
         return 0;
     }
@@ -151,7 +153,10 @@ int read_data(int init)
         // 1. Echo back the command in reverse order (least significant first)  like: 01 00 00 A0
         // 2. Send the length of the JSON string including two nulls at the end and all whitespace etc
         // 3. Send the JSON string followed by two nulls
-        len = build_json_info_str(json_str);
+        /*for (int i = 0; i < 1000; i++) {
+            putchar('A');
+        }
+        return 0;*/
         putchar(cmd & 0xFF);
         putchar((cmd >> 8) & 0xFF);
         putchar((cmd >> 16) & 0xFF);
@@ -161,6 +166,7 @@ int read_data(int init)
         putchar(0); // Only send the first 16 bits since we better not have a strong more than 64K long!
         putchar(0);
         puts(json_str);
+        gpio_put(25, true);
 
         return 0;
     } else {
