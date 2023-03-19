@@ -51,7 +51,8 @@ uint32_t build_json_info_str(char* str)
     strcat(str, "}\n");
     len = strlen(str);
     str[len + 1] = 0; // Double null terminate
-    return (len + 2); // Length includes both nulls
+    // 10 has to be added to the length. TODO: investigate why (probably will never get around to this tbh)
+    return (len + 2 + 10); // Length includes both nulls
 }
 
 int read_data(int init)
@@ -166,7 +167,6 @@ int read_data(int init)
         putchar(0); // Only send the first 16 bits since we better not have a strong more than 64K long!
         putchar(0);
         puts(json_str);
-        gpio_put(25, true);
 
         return 0;
     } else {

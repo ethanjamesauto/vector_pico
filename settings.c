@@ -5,7 +5,7 @@ int OFF_SHIFT = 50; // Smaller numbers == slower transits (the higher the number
 int NORMAL_SHIFT = 3; // The higher the number, the less flicker and faster draw but more wavy lines
 int OFF_DWELL0 = 5; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
 int OFF_DWELL1 = 0; // Time to sit before starting a transit
-int OFF_DWELL2 = 5; // Time to sit after finishing a transit
+int OFF_DWELL2 = 0; // Time to sit after finishing a transit
 bool FLIP_X = true; // Sometimes the X and Y need to be flipped and/or swapped
 bool FLIP_Y = true;
 bool SWAP_XY = false;
