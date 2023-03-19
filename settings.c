@@ -9,6 +9,7 @@ int OFF_DWELL2 = 0; // Time to sit after finishing a transit
 bool FLIP_X = true; // Sometimes the X and Y need to be flipped and/or swapped
 bool FLIP_Y = true;
 bool SWAP_XY = false;
+int PINCUSHION_FACTOR = 24; 
 
 void update_setting(int setting, int value) {
     switch (setting) {
@@ -35,6 +36,9 @@ void update_setting(int setting, int value) {
             break;
         case 7:
             SWAP_XY = value;
+            break;
+        case 8:
+            PINCUSHION_FACTOR = value;
             break;
     }
 }

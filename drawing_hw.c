@@ -9,8 +9,6 @@
 
 #define MAX_PTS 4096
 
-#define PINCUSHION_FACTOR 23 // higher number -> less correction
-
 #define BLANK_PIN 4
 
 #define PIO pio0
@@ -76,7 +74,7 @@ void end_frame()
     // loop from hogging the CPU and RAM.
     // TODO: Somehow have core 1 tell core 0 when the frame is done being drawn.
     while (frame_ready) {
-        sleep_ms(1);
+        sleep_us(100);
     }
 }
 

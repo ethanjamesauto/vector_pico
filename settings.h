@@ -10,5 +10,6 @@ extern int NORMAL_SHIFT;
 extern bool FLIP_X;
 extern bool FLIP_Y;
 extern bool SWAP_XY;
+extern int PINCUSHION_FACTOR;
 
 void update_setting(int setting, int value);
