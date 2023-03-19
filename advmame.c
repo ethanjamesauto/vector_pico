@@ -59,7 +59,7 @@ int read_data(int init)
 {
     static bool start = true;
     static uint32_t cmd = 0;
-
+    static bool resync = false;
     static uint8_t gl_red, gl_green, gl_blue;
     static int frame_offset = 0;
 
@@ -74,6 +74,11 @@ int read_data(int init)
 
     int c = getchar(); // read one byte at a time
 
+    if (resync && c == 0xc3) {
+        resync = false;
+        return 0;
+    }
+
     // if (c == -1) // if serial port returns nothing then exit
     //    return -1;
 
@@ -87,8 +92,10 @@ int read_data(int init)
 
     uint8_t header = (cmd >> 29) & 0b00000111;
 
-    // common case first
-    if (header == FLAG_XY) {
+    if (header == FLAG_RESYNC && cmd != 0xc0c1c2c3) {
+        resync = true;
+    }
+    else if (header == FLAG_XY) {
         if (start) {
             start = false;
             begin_frame();

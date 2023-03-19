@@ -18,6 +18,7 @@
 #define FLAG_FRAME            0x4
 #define FLAG_CMD              0x5
 #define FLAG_CMD_GET_DVG_INFO 0x1
+#define FLAG_RESYNC          0x6
 #define FLAG_COMPLETE_MONOCHROME (1 << 28)
 
 #define NUM_JSON_OPTS 12
