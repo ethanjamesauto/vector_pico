@@ -71,9 +71,9 @@ int read_data(int init)
         frame_offset = 0;
         return 0;
     }
-
+    gpio_put(25, 0);
     int c = getchar(); // read one byte at a time
-
+    gpio_put(25, 1);
     if (resync && c == 0xc3) {
         resync = false;
         return 0;
@@ -94,8 +94,7 @@ int read_data(int init)
 
     if (header == FLAG_RESYNC && cmd != 0xc0c1c2c3) {
         resync = true;
-    }
-    else if (header == FLAG_XY) {
+    } else if (header == FLAG_XY) {
         if (start) {
             start = false;
             begin_frame();

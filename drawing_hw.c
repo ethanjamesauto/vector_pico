@@ -99,6 +99,8 @@ void brightness(uint8_t r, uint8_t g, uint8_t b)
 
 void _draw_lineto(int x1, int y1)
 {
+    if (frame_count[POINT_WRITE] >= MAX_PTS)
+        return;
     static int x = 0;
     static int y = 0;
 
