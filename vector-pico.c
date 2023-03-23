@@ -1,12 +1,13 @@
+#include "hardware/gpio.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
-#include "hardware/gpio.h"
 #include "uart_settings.h"
 #include <stdio.h>
 
 #include "advmame.h"
 #include "drawing.h"
 #include "test_pattern.h"
+#include "vectormame.h"
 
 void draw_loop()
 {
@@ -45,7 +46,11 @@ int main()
     gpio_set_dir(25, true);
     gpio_put(25, false);
 
+#ifdef ADVMAME
     read_data(true);
+#else
+    vector_mame();
+#endif
     while (1) {
         int result = read_data(false);
     }
