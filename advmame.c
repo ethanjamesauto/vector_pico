@@ -59,11 +59,10 @@ int read_data(int init)
 {
     static bool start = true;
     static uint32_t cmd = 0;
-    static bool resync = false;
+    static bool resync = true;
     static uint8_t gl_red, gl_green, gl_blue;
     static int frame_offset = 0;
 
-    char buf1[5] = "";
     static uint32_t len;
 
     if (init) {
@@ -71,9 +70,9 @@ int read_data(int init)
         frame_offset = 0;
         return 0;
     }
-    gpio_put(25, 0);
+    //gpio_put(25, 0);
     int c = getchar(); // read one byte at a time
-    gpio_put(25, 1);
+    //gpio_put(25, 1);
     if (resync && c == 0xc3) {
         resync = false;
         return 0;
