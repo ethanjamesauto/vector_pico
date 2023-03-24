@@ -16,7 +16,7 @@ void draw_loop()
     }
 }
 
-// #define ADVMAME
+#define ADVMAME
 
 int main()
 {
