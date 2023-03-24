@@ -24,6 +24,8 @@
 #define NUM_JSON_OPTS 12
 #define MAX_JSON_STR_LEN 512
 
+void advance_mame_init();
+void advance_mame_sm();
 int read_data(int);
 
 #endif

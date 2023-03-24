@@ -12,12 +12,14 @@
 #include "drawing.h"
 #include "hardware/gpio.h"
 #include "string.h"
+#include "debug_serial.h"
 #include <stdio.h>
 // #include "settings.h"
 
 char const* json_opts[] = { "\"productName\"", "\"version\"", "\"flipx\"", "\"flipy\"", "\"swapxy\"", "\"bwDisplay\"", "\"vertical\"", "\"crtSpeed\"", "\"crtJumpSpeed\"", "\"remote\"", "\"crtType\"", "\"defaultGame\"" };
 char const* json_vals[] = { "\"VSTCM\"", "\"V3.0\"", "false", "false", "false", "false", "false", "15", "9", "true", "\"CUSTOM\"", "\"none\"" };
 static char json_str[MAX_JSON_STR_LEN];
+static uint32_t len;
 
 /*
 extern params_t v_setting[NB_SETTINGS];
@@ -55,6 +57,78 @@ uint32_t build_json_info_str(char* str)
     return (len + 2 + 10); // Length includes both nulls
 }
 
+void advance_mame_init()
+{
+    len = build_json_info_str(json_str);
+}
+
+void advance_mame_sm()
+{
+    static enum {
+        SYNCING,
+        READING
+    } state
+        = READING;
+
+    static uint cmd;
+    static int pos = 0;
+
+    // getchar() is slow, so I had to write this junk instead
+    char c;
+
+    fread(&c, 1, 1, stdin);
+    char str[20];
+    snprintf(str, sizeof(str), "Received: %2x\n", (int) c);
+    debug_send(str);
+
+    switch (state) {
+
+    case SYNCING:
+        if (c == 0xc3) {
+            state = READING;
+            //begin_frame();
+        }
+        break;
+
+    case READING:
+        cmd = (cmd << 8) | c;
+        if (++pos == 4) {
+            pos = 0;
+            switch ((cmd >> 29) & 0b00000111) {
+            case FLAG_XY:
+                break;
+            case FLAG_RGB:
+                break;
+            case FLAG_COMPLETE:
+                break;
+            case FLAG_EXIT:
+                break;
+            case FLAG_CMD:
+                if (!((cmd & 0xFF) == FLAG_CMD_GET_DVG_INFO))
+                    break;
+                debug_send("Sending JSON data...\n");
+                // Send the JSON string
+                putchar(cmd & 0xFF);
+                putchar((cmd >> 8) & 0xFF);
+                putchar((cmd >> 16) & 0xFF);
+                putchar((cmd >> 24) & 0xFF);
+                fflush(stdout);
+                putchar(len & 0xFF);
+                putchar((len >> 8) & 0xFF);
+                putchar(0); // Only send the first 16 bits since we better not have a strong more than 64K long!
+                putchar(0);
+                puts(json_str);
+                fflush(stdout);
+                break;
+            case FLAG_COMPLETE_MONOCHROME:
+                break;
+            }
+        }
+        break;
+    }
+    return;
+}
+
 int read_data(int init)
 {
     static bool start = true;
@@ -63,19 +137,17 @@ int read_data(int init)
     static uint8_t gl_red, gl_green, gl_blue;
     static int frame_offset = 0;
 
-    static uint32_t len;
-
     if (init) {
         len = build_json_info_str(json_str);
         frame_offset = 0;
         return 0;
     }
-    //gpio_put(25, 0);
-    //getchar() is slow, so I had to write this junk instead
+    // gpio_put(25, 0);
+    // getchar() is slow, so I had to write this junk instead
     char c;
     fread(&c, 1, 1, stdin);
 
-    //gpio_put(25, 1);
+    // gpio_put(25, 1);
     if (resync && c == 0xc3) {
         resync = false;
         return 0;

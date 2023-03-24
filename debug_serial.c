@@ -8,12 +8,13 @@
 #include "hardware/uart.h"
 #include "pico/stdlib.h"
 #include "settings.h"
+#include "debug_serial.h"
 #include <stdio.h>
 
 /// \tag::uart_advanced[]
 
 #define UART_ID uart0
-#define BAUD_RATE 9600
+#define BAUD_RATE 115200
 #define DATA_BITS 8
 #define STOP_BITS 1
 #define PARITY UART_PARITY_NONE
@@ -70,12 +71,12 @@ void on_uart_rx()
     }
 }
 
-void uart_send(char* buf)
+void debug_send(char* buf)
 {
     uart_puts(UART_ID, buf);
 }
 
-void settings_init()
+void debug_serial_init()
 {
     // Set up our UART with a basic baud rate.
     uart_init(UART_ID, BAUD_RATE);
