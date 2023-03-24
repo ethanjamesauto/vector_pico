@@ -57,7 +57,7 @@ void init()
         gpio_set_function(i, GPIO_FUNC_PIO0);
     uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
 #ifdef MCP4922
-    pio_spi_cs_init(PIO, SM_X, offset, 16, 133e6 / (50e6 * 2), 5, 7);
+    pio_spi_cs_init(PIO, SM_X, offset, 16, 133e6 / (20e6 * 2), 5, 7);
 #else
     pio_spi_cs_init(PIO, SM_X, offset, 24, 133e6 / (24e6 * 2), 5, 7);
     pio_spi_cs_init(PIO, SM_Y, offset, 24, 133e6 / (24e6 * 2), 8, 10);

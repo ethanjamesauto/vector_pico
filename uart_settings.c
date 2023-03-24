@@ -13,7 +13,7 @@
 /// \tag::uart_advanced[]
 
 #define UART_ID uart0
-#define BAUD_RATE 115200
+#define BAUD_RATE 9600
 #define DATA_BITS 8
 #define STOP_BITS 1
 #define PARITY UART_PARITY_NONE
@@ -50,7 +50,7 @@ void on_uart_rx()
                     // scan two ints into a and b
                     sscanf(buf, "%d %d", &setting, &value);
                     uart_puts(UART_ID, "Updated setting ");
-                    uart_putc(UART_ID, (char) setting + '0');
+                    uart_putc(UART_ID, (char)setting + '0');
                     uart_putc(UART_ID, '\n');
 
                     update_setting(setting, value);
@@ -70,10 +70,15 @@ void on_uart_rx()
     }
 }
 
+void uart_send(char* buf)
+{
+    uart_puts(UART_ID, buf);
+}
+
 void settings_init()
 {
     // Set up our UART with a basic baud rate.
-    uart_init(UART_ID, 115200);
+    uart_init(UART_ID, BAUD_RATE);
 
     // Set the TX and RX pins by using the function select on the GPIO
     // Set datasheet for more information on function select

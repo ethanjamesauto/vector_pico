@@ -16,6 +16,8 @@ void draw_loop()
     }
 }
 
+// #define ADVMAME
+
 int main()
 {
     stdio_init_all();
@@ -48,11 +50,12 @@ int main()
 
 #ifdef ADVMAME
     read_data(true);
-#else
-    vector_mame();
-#endif
     while (1) {
         int result = read_data(false);
     }
-    return 0;
+#else
+    while (1) {
+        vector_mame();
+    }
+#endif
 }
