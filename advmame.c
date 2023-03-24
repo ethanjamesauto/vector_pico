@@ -129,6 +129,8 @@ void advance_mame_sm()
     return;
 }
 
+#define CHAR_BUF_SIZE 4
+
 int read_data(int init)
 {
     static bool start = true;
@@ -144,8 +146,16 @@ int read_data(int init)
     }
     // gpio_put(25, 0);
     // getchar() is slow, so I had to write this junk instead
-    char c;
-    fread(&c, 1, 1, stdin);
+    static int buf_pos = CHAR_BUF_SIZE;
+    static char buf[CHAR_BUF_SIZE];
+
+    if (buf_pos == CHAR_BUF_SIZE) {
+        buf_pos = 0;
+        //fgets(buf, CHAR_BUF_SIZE, stdin);
+        fread(buf, CHAR_BUF_SIZE, 1, stdin);
+    }
+
+    char c = buf[buf_pos++];
 
     // gpio_put(25, 1);
     if (resync && c == 0xc3) {
