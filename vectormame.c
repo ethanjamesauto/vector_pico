@@ -2,6 +2,8 @@
 #include "pico/stdlib.h"
 #include <stdio.h>
 
+#define CHAR_BUF_SIZE 128
+
 void vector_mame()
 {
     static enum {
@@ -13,7 +15,17 @@ void vector_mame()
     static uint cmd;
     static int pos = 0;
 
-    int c = getchar();
+    //getchar() is slow, so I had to write this junk instead
+    static int buf_pos = CHAR_BUF_SIZE;
+    static char buf[CHAR_BUF_SIZE];
+
+    if (buf_pos == CHAR_BUF_SIZE) {
+        buf_pos = 0;
+        //fgets(buf, CHAR_BUF_SIZE, stdin);
+        fread(buf, CHAR_BUF_SIZE, 1, stdin);
+    }
+
+    int c = buf[buf_pos++];
 
     switch (state) {
 
