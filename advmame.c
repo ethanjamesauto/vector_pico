@@ -9,10 +9,10 @@
 
 // #include <SD.h>
 #include "advmame.h"
+#include "debug_serial.h"
 #include "drawing.h"
 #include "hardware/gpio.h"
 #include "string.h"
-#include "debug_serial.h"
 #include <stdio.h>
 // #include "settings.h"
 
@@ -78,7 +78,7 @@ void advance_mame_sm()
 
     fread(&c, 1, 1, stdin);
     char str[20];
-    snprintf(str, sizeof(str), "Received: %2x\n", (int) c);
+    snprintf(str, sizeof(str), "Received: %2x\n", (int)c);
     debug_send(str);
 
     switch (state) {
@@ -86,10 +86,9 @@ void advance_mame_sm()
     case SYNCING:
         if (c == 0xc3) {
             state = READING;
-            //begin_frame();
+            // begin_frame();
         }
         break;
-
     case READING:
         cmd = (cmd << 8) | c;
         if (++pos == 4) {
@@ -106,17 +105,23 @@ void advance_mame_sm()
             case FLAG_CMD:
                 if (!((cmd & 0xFF) == FLAG_CMD_GET_DVG_INFO))
                     break;
-                debug_send("Sending JSON data...\n");
-                // Send the JSON string
+                // debug_send("Sending JSON data...\n");
+                //  Send the JSON string
+                // send cmd little-endian first with fwrite
+                fwrite(&cmd, 4, 1, stdout);
+                /*
                 putchar(cmd & 0xFF);
                 putchar((cmd >> 8) & 0xFF);
                 putchar((cmd >> 16) & 0xFF);
                 putchar((cmd >> 24) & 0xFF);
-                fflush(stdout);
+                //*/
+                fwrite(&len, 4, 1, stdout);
+                /*
                 putchar(len & 0xFF);
                 putchar((len >> 8) & 0xFF);
                 putchar(0); // Only send the first 16 bits since we better not have a strong more than 64K long!
                 putchar(0);
+                //*/
                 puts(json_str);
                 fflush(stdout);
                 break;
@@ -130,7 +135,7 @@ void advance_mame_sm()
 }
 
 #define CHAR_BUF_SIZE 4
-
+int zero = 0;
 int read_data(int init)
 {
     static bool start = true;
@@ -151,7 +156,7 @@ int read_data(int init)
 
     if (buf_pos == CHAR_BUF_SIZE) {
         buf_pos = 0;
-        //fgets(buf, CHAR_BUF_SIZE, stdin);
+        // fgets(buf, CHAR_BUF_SIZE, stdin);
         fread(buf, CHAR_BUF_SIZE, 1, stdin);
     }
 
@@ -228,7 +233,7 @@ int read_data(int init)
             // draw_string(itoa(line_draw_speed*NORMAL_SHIFT_SCALING, buf1, 10), 3400, 150, 6, v_setting[13].pval);
             draw_string(itoa(dwell_time, buf1, 10), 3400, 150, 6, v_setting[13].pval);
         }
-        */
+        //*/
         end_frame();
         start = true;
         return 1;
@@ -244,11 +249,12 @@ int read_data(int init)
         // 1. Echo back the command in reverse order (least significant first)  like: 01 00 00 A0
         // 2. Send the length of the JSON string including two nulls at the end and all whitespace etc
         // 3. Send the JSON string followed by two nulls
-        /*for (int i = 0; i < 1000; i++) {
+        /*
+        for (int i = 0; i < 1000; i++) {
             putchar('A');
         }
-        return 0;*/
-        putchar(cmd & 0xFF);
+        return 0;//*/
+        /*putchar(cmd & 0xFF);
         putchar((cmd >> 8) & 0xFF);
         putchar((cmd >> 16) & 0xFF);
         putchar((cmd >> 24) & 0xFF);
@@ -256,7 +262,10 @@ int read_data(int init)
         putchar((len >> 8) & 0xFF);
         putchar(0); // Only send the first 16 bits since we better not have a strong more than 64K long!
         putchar(0);
-        puts(json_str);
+        puts(json_str);*/
+        fwrite(&cmd, 4, 1, stdout);
+        fwrite(&zero, 4, 1, stdout);
+        fflush(stdout);
 
         return 0;
     } else {
