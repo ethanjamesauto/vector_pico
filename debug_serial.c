@@ -4,11 +4,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+#include "debug_serial.h"
 #include "hardware/irq.h"
 #include "hardware/uart.h"
 #include "pico/stdlib.h"
 #include "settings.h"
-#include "debug_serial.h"
 #include <stdio.h>
 
 /// \tag::uart_advanced[]
@@ -73,11 +73,14 @@ void on_uart_rx()
 
 void debug_send(char* buf)
 {
+#ifdef ENABLE_DEBUG_SERIAL
     uart_puts(UART_ID, buf);
+#endif
 }
 
 void debug_serial_init()
 {
+#ifdef ENABLE_DEBUG_SERIAL
     // Set up our UART with a basic baud rate.
     uart_init(UART_ID, BAUD_RATE);
 
@@ -116,6 +119,7 @@ void debug_serial_init()
     // Lets send a basic string out, and then run a loop and wait for RX interrupts
     // The handler will count them, but also reflect the incoming data back with a slight change!
     uart_puts(UART_ID, "Initiated serial connection\n");
+#endif
 }
 
 /// \end:uart_advanced[]
