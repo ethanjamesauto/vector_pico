@@ -254,7 +254,7 @@ int read_data(int init)
             putchar('A');
         }
         return 0;//*/
-        /*putchar(cmd & 0xFF);
+        putchar(cmd & 0xFF);
         putchar((cmd >> 8) & 0xFF);
         putchar((cmd >> 16) & 0xFF);
         putchar((cmd >> 24) & 0xFF);
@@ -262,10 +262,10 @@ int read_data(int init)
         putchar((len >> 8) & 0xFF);
         putchar(0); // Only send the first 16 bits since we better not have a strong more than 64K long!
         putchar(0);
-        puts(json_str);*/
-        fwrite(&cmd, 4, 1, stdout);
+        puts(json_str);
+        /*fwrite(&cmd, 4, 1, stdout);
         fwrite(&zero, 4, 1, stdout);
-        fflush(stdout);
+        fflush(stdout);*/
 
         return 0;
     } else {
