@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Initialise pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
-set(PICO_SDK_PATH "C:/RP2040/pico-sdk")
+set(PICO_SDK_PATH ${CMAKE_CURRENT_SOURCE_DIR}/pico-sdk/)
 
 set(PICO_BOARD pico CACHE STRING "Board type")
 
@@ -68,8 +68,8 @@ target_link_libraries(vector-pico
 
 pico_add_extra_outputs(vector-pico)
 
-add_custom_command(TARGET vector-pico POST_BUILD
-    COMMAND powershell ${CMAKE_CURRENT_SOURCE_DIR}/picoFlashTool_WinPS.ps1
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Flashing Pico..."
-)
+#add_custom_command(TARGET vector-pico POST_BUILD
+#    COMMAND powershell ${CMAKE_CURRENT_SOURCE_DIR}/picoFlashTool_WinPS.ps1
+#    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+#    COMMENT "Flashing Pico..."
+#)
