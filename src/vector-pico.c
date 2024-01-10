@@ -29,7 +29,7 @@ int main()
     const int pos = 2047;
     const int neg = 2048;
 
-    //debug_serial_init();
+    debug_serial_init();
     init();
     begin_frame();
     //*
