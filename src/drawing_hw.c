@@ -9,7 +9,7 @@
 
 #define MAX_PTS 4096
 
-#define BLANK_PIN 4
+#define BLANK_PIN 3
 
 #define PIO pio0
 #define SM_X 0
@@ -55,9 +55,9 @@ void init()
     // set up SPI state machines
     uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
 #ifdef MCP4922
-    for (int i = 5; i <= 7; i++)
+    for (int i = 0; i <= 2; i++)
         gpio_set_function(i, GPIO_FUNC_PIO0);
-    pio_spi_cs_init(PIO, SM_X, offset, 16, 133e6 / (20e6 * 2), 5, 7);
+    pio_spi_cs_init(PIO, SM_X, offset, 16, 133e6 / (20e6 * 2), 0, 2);
 #else
     for (int i = 5; i <= 10; i++)
         gpio_set_function(i, GPIO_FUNC_PIO0);

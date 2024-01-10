@@ -9,6 +9,9 @@
 #include "test_pattern.h"
 #include "vectormame.h"
 
+// tinyusb
+#include "tusb.h"
+
 void draw_loop()
 {
     while (1) {
@@ -20,12 +23,13 @@ void draw_loop()
 
 int main()
 {
+    tusb_init();
     stdio_init_all();
 
     const int pos = 2047;
     const int neg = 2048;
 
-    debug_serial_init();
+    //debug_serial_init();
     init();
     begin_frame();
     //*
