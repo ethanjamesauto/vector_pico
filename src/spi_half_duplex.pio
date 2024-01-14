@@ -18,7 +18,7 @@ public entry_point:
 .wrap
 
 % c-sdk {
-#define MCP4922
+#define SINGLE_MCP4922
 
 #define DAC_X 0b0111000000000000
 #define DAC_Y 0b1111000000000000
@@ -30,7 +30,7 @@ static inline void pio_spi_cs_init(PIO pio, uint sm, uint prog_offs, uint n_bits
     sm_config_set_set_pins(&c, pin_mosi, 1);
     sm_config_set_sideset_pins(&c, pin_sck);
     
-    #ifdef MCP4922
+    #ifdef SINGLE_MCP4922
     sm_config_set_out_shift(&c, false, false, 32);
     #else
     sm_config_set_out_shift(&c, false, false, n_bits);

@@ -53,7 +53,7 @@ void init()
     gpio_put(BLANK_PIN, 0);
 
     // set up SPI state machines
-#ifdef MCP4922
+#ifdef SINGLE_MCP4922
     uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
     for (int i = 5; i <= 7; i++)
         gpio_set_function(i, GPIO_FUNC_PIO0);
