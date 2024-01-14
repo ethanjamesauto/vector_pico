@@ -58,6 +58,12 @@ void init()
     for (int i = 5; i <= 7; i++)
         gpio_set_function(i, GPIO_FUNC_PIO0);
     pio_spi_cs_init(PIO, SM_X, offset, 16, 133e6 / (20e6 * 2), 5, 7);
+#elif MCP4922
+    uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
+    for (int i = 5; i <= 10; i++)
+        gpio_set_function(i, GPIO_FUNC_PIO0);
+    pio_spi_cs_init(PIO, SM_X, offset, 16, 133e6 / (20e6 * 2), 5, 7);
+    pio_spi_cs_init(PIO, SM_Y, offset, 16, 133e6 / (20e6 * 2), 6, 7);
 #else
     uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
     for (int i = 5; i <= 10; i++)
@@ -160,8 +166,11 @@ static inline void __always_inline(goto_xy)(int16_t x, int16_t y)
     int ytemp = y >> 1;
     int xcorr = x - (xtemp * ytemp * ytemp >> PINCUSHION_FACTOR);
     int ycorr = y - (ytemp * xtemp * xtemp >> PINCUSHION_FACTOR);
-#ifdef MCP4922
+#ifdef SINGLE_MCP4922
     pio_sm_put_blocking(PIO, SM_X, DAC_X | (xcorr + 2048) | ((DAC_Y | (ycorr + 2048)) << 16));
+#elif MCP4922
+    pio_sm_put_blocking(PIO, SM_X, DAC_X | (xcorr + 2048));
+    pio_sm_put_blocking(PIO, SM_Y, DAC_Y | (ycorr + 2048));
 #else
     pio_sm_put_blocking(PIO, SM_X, max5716_data_word((xcorr + 2048) << 4));
     pio_sm_put_blocking(PIO, SM_Y, max5716_data_word((ycorr + 2048) << 4));
