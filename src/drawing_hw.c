@@ -29,18 +29,19 @@ typedef struct {
     uint16_t shift; // drawing speed
 } point_t;
 
+// Global variables
 point_t frame[2][MAX_PTS]; // two framebuffers - one for writing to, and one for reading from
-
 uint frame_count[2]; // number of points in each framebuffer
 
 bool which_frame = 0; // which framebuffer is read from
-#define POINT_READ which_frame
-#define POINT_WRITE !which_frame
-
 bool frame_ready = 0;
 
 int16_t xpos = 0, ypos = 0; // current position
 int rpos = 0, gpos = 0, bpos = 0; // current color
+// End global variables
+
+#define POINT_READ which_frame
+#define POINT_WRITE !which_frame
 
 void init()
 {
