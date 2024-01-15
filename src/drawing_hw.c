@@ -37,7 +37,7 @@ bool which_frame = 0; // which framebuffer is read from
 bool frame_ready = 0;
 
 int16_t xpos = 0, ypos = 0; // current position
-int rpos = 0, gpos = 0, bpos = 0; // current color
+uint8_t rpos = 0, gpos = 0, bpos = 0; // current color
 // End global variables
 
 #define POINT_READ which_frame
