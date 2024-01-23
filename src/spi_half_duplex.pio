@@ -30,11 +30,7 @@ static inline void pio_spi_cs_init(PIO pio, uint sm, uint prog_offs, uint n_bits
     sm_config_set_set_pins(&c, pin_mosi, 1);
     sm_config_set_sideset_pins(&c, pin_sck);
     
-    #ifdef SINGLE_MCP4922
-    sm_config_set_out_shift(&c, false, false, 32);
-    #else
     sm_config_set_out_shift(&c, false, false, n_bits);
-    #endif
 
     // This is enabled to lengthen the TX fifo
     sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);

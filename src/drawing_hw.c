@@ -161,14 +161,25 @@ void _draw_lineto(int x1, int y1)
 /**
  * Everything below this line should run as fast as possible and on a separate core
  */
-static inline void __always_inline(goto_xy)(int16_t x, int16_t y)
+static inline void __always_inline(goto_xy)(int16_t x, int16_t y, bool always_update)
 {
+    static int old_x;
+    static int old_y;
+
     int xtemp = x >> 1;
     int ytemp = y >> 1;
     int xcorr = x - (xtemp * ytemp * ytemp >> PINCUSHION_FACTOR);
     int ycorr = y - (ytemp * xtemp * xtemp >> PINCUSHION_FACTOR);
+
+    if (always_update || xcorr != old_x || ycorr != old_y)
+        return;
+    
+    old_x = xcorr;
+    old_y = ycorr;
+    
 #ifdef SINGLE_MCP4922
-    pio_sm_put_blocking(PIO, SM_X, DAC_X | (xcorr + 2048) | ((DAC_Y | (ycorr + 2048)) << 16));
+    pio_sm_put_blocking(PIO, SM_X, (DAC_X | (xcorr + 2048)) << 16);
+    pio_sm_put_blocking(PIO, SM_X, (DAC_Y | (ycorr + 2048)) << 16);
 #elif MCP4922
     pio_sm_put_blocking(PIO, SM_X, DAC_X | (xcorr + 2048));
     pio_sm_put_blocking(PIO, SM_Y, DAC_Y | (ycorr + 2048));
@@ -183,7 +194,7 @@ static inline void __always_inline(dwell)(int count)
     // can work better or faster without this on some monitors
     for (int i = 0; i < count; i++) { // The original VSTCM used delayNanoseconds(500);
         // sleep_us(1);
-        goto_xy(xpos, ypos); // writing to the DACs seems to have a more stable output than sleeping
+        goto_xy(xpos, ypos, true); // writing to the DACs seems to have a more stable output than sleeping
     }
 }
 
@@ -198,7 +209,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
             if (x >= x1)
                 goto end;
             y = x * dy / dx + b;
-            goto_xy(x, y);
+            goto_xy(x, y, false);
         }
     case X_NEGATIVE:
         while (1) {
@@ -206,7 +217,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
             if (x <= x1)
                 goto end;
             y = x * dy / dx + b;
-            goto_xy(x, y);
+            goto_xy(x, y, false);
         }
     case Y_POSITIVE:
         while (1) {
@@ -214,7 +225,7 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
             if (y >= y1)
                 goto end;
             x = y * dx / dy + b;
-            goto_xy(x, y);
+            goto_xy(x, y, false);
         }
     case Y_NEGATIVE:
         while (1) {
@@ -222,11 +233,11 @@ static inline void __always_inline(draw_line)(int16_t x1, int16_t y1, int16_t dx
             if (y <= y1)
                 goto end;
             x = y * dx / dy + b;
-            goto_xy(x, y);
+            goto_xy(x, y, false);
         }
     }
 end:
-    goto_xy(x1, y1);
+    goto_xy(x1, y1, false);
     xpos = x1;
     ypos = y1;
     return;
