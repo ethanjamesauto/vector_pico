@@ -9,7 +9,7 @@
 
 #define MAX_PTS 4096
 
-#define BLANK_PIN 4
+#define BLANK_PIN 3
 
 #define PIO pio0
 #define SM_X 0
@@ -56,9 +56,9 @@ void init()
     // set up SPI state machines
 #ifdef SINGLE_MCP4922
     uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
-    for (int i = 5; i <= 7; i++)
+    for (int i = 4; i <= 6; i++)
         gpio_set_function(i, GPIO_FUNC_PIO0);
-    pio_spi_cs_init(PIO, SM_X, offset, 16, 133e6 / (20e6 * 2), 5, 7);
+    pio_spi_cs_init(PIO, SM_X, offset, 16, 133e6 / (20e6 * 2), 4, 6);
 #elif MCP4922
     uint offset = pio_add_program(PIO, &spi_cpha0_cs_program);
     for (int i = 5; i <= 10; i++)
@@ -170,16 +170,16 @@ static inline void __always_inline(goto_xy)(int16_t x, int16_t y, bool always_up
     int ytemp = y >> 1;
     int xcorr = x - (xtemp * ytemp * ytemp >> PINCUSHION_FACTOR);
     int ycorr = y - (ytemp * xtemp * xtemp >> PINCUSHION_FACTOR);
-
-    if (always_update || xcorr != old_x || ycorr != old_y)
-        return;
-    
-    old_x = xcorr;
-    old_y = ycorr;
-    
+        
 #ifdef SINGLE_MCP4922
-    pio_sm_put_blocking(PIO, SM_X, (DAC_X | (xcorr + 2048)) << 16);
-    pio_sm_put_blocking(PIO, SM_X, (DAC_Y | (ycorr + 2048)) << 16);
+    if (always_update || xcorr != old_x) {
+        pio_sm_put_blocking(PIO, SM_X, (DAC_X | (xcorr + 2048)) << 16);
+        old_x = xcorr;
+    }
+    if (always_update || ycorr != old_y) {
+        pio_sm_put_blocking(PIO, SM_X, (DAC_Y | (ycorr + 2048)) << 16);
+        old_y = ycorr;
+    }
 #elif MCP4922
     pio_sm_put_blocking(PIO, SM_X, DAC_X | (xcorr + 2048));
     pio_sm_put_blocking(PIO, SM_Y, DAC_Y | (ycorr + 2048));
