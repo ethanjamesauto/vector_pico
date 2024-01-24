@@ -243,7 +243,7 @@ end:
     return;
 }
 
-// TODO: remove this function
+// TODO: delete this (some old test code specifically for oscilloscopes)
 static inline void __always_inline(jump)(int16_t x, int16_t y)
 {
     xpos = x;
