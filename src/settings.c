@@ -2,15 +2,35 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-int OFF_SHIFT = 4000; // Smaller numbers == slower transits (the higher the number, the less flicker and faster draw but more wavy lines)
-int NORMAL_SHIFT = 5; // The higher the number, the less flicker and faster draw but more wavy lines
-int OFF_DWELL0 = 5; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
+#define OSCILLOSCOPE
+
+#ifdef OSCILLOSCOPE
+
+int OFF_SHIFT = 400; // Smaller numbers == slower transits (the higher the number, the less flicker and faster draw but more wavy lines)
+int NORMAL_SHIFT = 20; // The higher the number, the less flicker and faster draw but more wavy lines
+int OFF_DWELL0 = 2; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
 int OFF_DWELL1 = 0; // Time to sit before starting a transit
 int OFF_DWELL2 = 0; // Time to sit after finishing a transit
 bool FLIP_X = true; // Sometimes the X and Y need to be flipped and/or swapped
 bool FLIP_Y = true;
 bool SWAP_XY = false;
-int PINCUSHION_FACTOR = 24;
+ 
+int PINCUSHION_FACTOR = 32;
+
+#else
+
+int OFF_SHIFT = 15; // Smaller numbers == slower transits (the higher the number, the less flicker and faster draw but more wavy lines)
+int NORMAL_SHIFT = 10; // The higher the number, the less flicker and faster draw but more wavy lines
+int OFF_DWELL0 = 0; // Time to wait after changing the beam intensity (settling time for intensity DACs and monitor)
+int OFF_DWELL1 = 0; // Time to sit before starting a transit
+int OFF_DWELL2 = 0; // Time to sit after finishing a transit
+bool FLIP_X = true; // Sometimes the X and Y need to be flipped and/or swapped
+bool FLIP_Y = true;
+bool SWAP_XY = false;
+ 
+int PINCUSHION_FACTOR = 32;
+
+#endif
 
 void update_setting(int setting, int value)
 {
